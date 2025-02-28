@@ -2,7 +2,7 @@
 
 The `CompactUnionList`, or `cul` (which is French for "ass" btw) data structure is a blazingly small collection of unions that gives up useless operations (like any kind of random access) in order to optimize its size.
 
-## Why not a slice?
+## 🍰 Why not an array?
 
 Using a slice/array/array list of unions will result in a lot of waste of space, especially when some variants are a lot bigger than others.
 
@@ -62,3 +62,26 @@ This allow to iterate from the last element to the first (first-in-last-out). Th
 
 In some (statically-known) edge cases, this method of iteration might store more than a `std.MultiArrayList` or even a slice/array/array list. 
 
+## 📃 License
+
+MIT License
+
+Copyright (c) 2025 Dok8tavo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
