@@ -195,6 +195,87 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             }
         }
 
+        /// Insert an element at the given byte index. It assumes the byte index is valid. It
+        /// allocates more memory as necessary, and invalidates element pointers if additional
+        /// memory is needed.
+        pub fn insert(cul: *Cul, allocator: Allocator, variant_index: usize, u: Union) Allocator.Error!void {
+            try cul.insertDir(iter.direction(), allocator, variant_index, u);
+        }
+
+        /// Insert an element at the given byte index. It assumes the byte index is valid. It
+        /// allocates more memory as necessary, and invalidates element pointers if additional
+        /// memory is needed.
+        pub fn insertDir(
+            cul: *Cul,
+            comptime dir: Direction,
+            allocator: Allocator,
+            variant_index: usize,
+            u: Union,
+        ) Allocator.Error!void {
+            switch (u) {
+                inline else => |payload, comptime_tag| try cul.insertVariantDir(
+                    dir,
+                    allocator,
+                    variant_index,
+                    comptime_tag,
+                    payload,
+                ),
+            }
+        }
+
+        /// Insert a variant at the given byte index. It assumes the byte index is valid. It
+        /// allocates more memory as necessary, and invalidates element pointers if additional
+        /// memory is needed.
+        pub fn insertVariant(
+            cul: *Cul,
+            allocator: Allocator,
+            variant_index: usize,
+            comptime tag: Tag,
+            payload: Payload(tag),
+        ) Allocator.Error!void {
+            try cul.insertVariantDir(iter.direction(), allocator, variant_index, tag, payload);
+        }
+
+        /// Insert a variant at the given byte index. It assumes the byte index is valid. It
+        /// allocates more memory as necessary, and invalidates element pointers if additional
+        /// memory is needed.
+        pub fn insertVariantDir(
+            cul: *Cul,
+            comptime dir: Direction,
+            allocator: Allocator,
+            variant_index: usize,
+            comptime tag: Tag,
+            payload: Payload(tag),
+        ) Allocator.Error!void {
+            const size = variantSize(tag);
+
+            // unsure capacity is available
+            try cul.bytes.ensureUnusedCapacity(allocator, size);
+
+            const old_len = cul.bytes.items.len;
+            const new_len = cul.bytes.items.len + size;
+
+            // growing the slice
+            cul.bytes.items = cul.bytes.items.ptr[0..new_len];
+
+            // moving the higher elements
+            const dest, const source = switch (dir) {
+                .foreward => .{
+                    cul.bytes.items[variant_index + size .. new_len],
+                    cul.bytes.items[variant_index..old_len],
+                },
+                .backward => .{
+                    cul.bytes.items[variant_index..new_len],
+                    cul.bytes.items[variant_index - size .. old_len],
+                },
+            };
+
+            std.mem.copyBackwards(u8, dest, source);
+
+            // setting the bytes
+            cul.setVariantUncheckedDir(dir, tag, payload, variant_index);
+        }
+
         pub fn iterateDir(cul: *const Cul, comptime dir: Direction) IteratorDir(dir) {
             return .init(cul);
         }
@@ -245,6 +326,12 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
                     if (it.ended())
                         return null;
                     return it.cul.getDir(dir, it.idx);
+                }
+
+                pub fn skipMany(it: *CulIterator, n: usize) void {
+                    var idx = n;
+                    while (!it.ended() and idx != 0) : (idx -= 1)
+                        it.skip();
                 }
 
                 pub fn ended(it: CulIterator) bool {

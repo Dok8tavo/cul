@@ -979,3 +979,98 @@ test "BothCul.resolveIndex" {
     try t.expectEqual(35, both.resolveIndexDir(.backward, 0));
     try t.expectEqual(Union{ .big_int = 31415 }, both.getDir(.backward, 35));
 }
+
+test "ForeCul.insertVariant" {
+    var fore = ForeCul{};
+    defer fore.deinit(ta);
+
+    try fore.insertVariant(ta, 0, .empty, {});
+    try t.expectEqual(Union.empty, fore.get(0));
+
+    try fore.insertVariant(ta, 1, .byte, 69);
+    var iter = fore.iterate();
+
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    try fore.insertVariant(ta, iter.idx, .array, .{ 0, 1, 32, 243 });
+    iter = .init(&fore);
+
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .array = .{ 0, 1, 32, 243 } }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    const idx = fore.resolveIndex(2) orelse return error.UnexpectedNull;
+    try fore.insertVariant(ta, idx, .float, 3.1415);
+    iter = .init(&fore);
+
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .float = 3.1415 }, iter.next());
+    try t.expectEqual(Union{ .array = .{ 0, 1, 32, 243 } }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    try fore.insertVariant(ta, 0, .big_int, 35148_3773);
+    iter = .init(&fore);
+
+    try t.expectEqual(Union{ .big_int = 35148_3773 }, iter.next());
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .float = 3.1415 }, iter.next());
+    try t.expectEqual(Union{ .array = .{ 0, 1, 32, 243 } }, iter.next());
+    try t.expectEqual(null, iter.next());
+}
+
+test "BackCul.insertVariant" {
+    var back = BackCul{};
+    defer back.deinit(ta);
+
+    try back.insertVariant(ta, 1, .empty, {});
+    try t.expectEqual(Union.empty, back.get(1));
+
+    try back.insertVariant(ta, 2, .byte, 69);
+    var iter = back.iterate();
+
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    try back.insertVariant(ta, 5, .float, 1.618);
+    iter = .init(&back);
+
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .float = 1.618 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    try back.insertVariant(ta, back.bytes.items.len + 5, .array, .{ 2, 3, 5, 7 });
+    iter = .init(&back);
+
+    try t.expectEqual(Union{ .array = .{ 2, 3, 5, 7 } }, iter.next());
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .float = 1.618 }, iter.next());
+    try t.expectEqual(null, iter.next());
+}
+
+test "BothCul.insertVariant" {
+    var both = BothCul{};
+    defer both.deinit(ta);
+
+    try both.insertVariantDir(.foreward, ta, 0, .empty, {});
+    try t.expectEqual(Union.empty, both.getDir(.foreward, 0));
+
+    try both.insertVariantDir(.backward, ta, 6, .float, 1.618);
+    try t.expectEqual(Union{ .float = 1.618 }, both.getDir(.foreward, 0));
+
+    try both.insertVariantDir(.backward, ta, both.bytes.items.len + 3, .byte, 69);
+
+    var iter = both.iterateDir(.foreward);
+
+    try t.expectEqual(Union{ .float = 1.618 }, iter.next());
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(null, iter.next());
+}
