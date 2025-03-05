@@ -195,6 +195,50 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             }
         }
 
+        pub fn remove(cul: *Cul, variant_index: usize) void {
+            cul.removeDir(iter.direction(), variant_index);
+        }
+
+        pub fn removeDir(cul: *Cul, comptime dir: Direction, variant_index: usize) void {
+            switch (cul.getTagDir(dir, variant_index)) {
+                inline else => |comptime_tag| cul.removeVariantDir(
+                    dir,
+                    comptime_tag,
+                    variant_index,
+                ),
+            }
+        }
+
+        pub fn removeVariant(cul: *Cul, comptime tag: Tag, variant_index: usize) void {
+            cul.removeVariantDir(iter.direction(), tag, variant_index);
+        }
+
+        pub fn removeVariantDir(
+            cul: *Cul,
+            comptime dir: Direction,
+            comptime tag: Tag,
+            variant_index: usize,
+        ) void {
+            const size = comptime variantSize(tag);
+
+            // moving the higher elements
+            const dest, const source = switch (dir) {
+                .foreward => .{
+                    cul.bytes.items[variant_index .. cul.bytes.items.len - size],
+                    cul.bytes.items[variant_index + size .. cul.bytes.items.len],
+                },
+                .backward => .{
+                    cul.bytes.items[variant_index - size .. cul.bytes.items.len - size],
+                    cul.bytes.items[variant_index..cul.bytes.items.len],
+                },
+            };
+
+            std.mem.copyForwards(u8, dest, source);
+
+            // resizing the byes
+            cul.bytes.items = cul.bytes.items[0 .. cul.bytes.items.len - size];
+        }
+
         /// Insert an element at the given byte index. It assumes the byte index is valid. It
         /// allocates more memory as necessary, and invalidates element pointers if additional
         /// memory is needed.

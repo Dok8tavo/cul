@@ -1074,3 +1074,113 @@ test "BothCul.insertVariant" {
     try t.expectEqual(Union{ .byte = 69 }, iter.next());
     try t.expectEqual(null, iter.next());
 }
+
+test "ForeCul.remove" {
+    var fore = ForeCul{};
+    defer fore.deinit(ta);
+
+    try fore.append(ta, .empty);
+    fore.remove(0);
+
+    var iter = fore.iterate();
+    try t.expectEqual(null, iter.next());
+
+    try fore.append(ta, .{ .byte = 69 });
+    try fore.append(ta, .{ .float = 1.618 });
+    try fore.append(ta, .{ .signed_byte = 42 });
+
+    iter = fore.iterate();
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .float = 1.618 }, iter.next());
+    try t.expectEqual(Union{ .signed_byte = 42 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    var index = fore.resolveIndex(1) orelse return error.UnexpectedNull;
+    fore.remove(index);
+
+    iter = fore.iterate();
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .signed_byte = 42 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    index = fore.resolveIndex(1) orelse return error.UnexpectedNull;
+    fore.remove(index);
+
+    iter = fore.iterate();
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    fore.remove(0);
+    iter = fore.iterate();
+    try t.expectEqual(null, iter.next());
+}
+
+test "BackCul.remove" {
+    var back = BackCul{};
+    defer back.deinit(ta);
+
+    try back.append(ta, .empty);
+    var index = back.resolveIndex(0) orelse return error.UnexpectedNull;
+
+    back.remove(index);
+
+    var iter = back.iterate();
+    try t.expectEqual(null, iter.next());
+
+    try back.append(ta, .{ .byte = 69 });
+    try back.append(ta, .{ .float = 1.618 });
+    try back.append(ta, .{ .signed_byte = 42 });
+
+    iter = back.iterate();
+    try t.expectEqual(Union{ .signed_byte = 42 }, iter.next());
+    try t.expectEqual(Union{ .float = 1.618 }, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    index = back.resolveIndex(1) orelse return error.UnexpectedNull;
+    back.remove(index);
+
+    iter = back.iterate();
+    try t.expectEqual(Union{ .signed_byte = 42 }, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    index = back.resolveIndex(1) orelse return error.UnexpectedNull;
+    back.remove(index);
+
+    iter = back.iterate();
+    try t.expectEqual(Union{ .signed_byte = 42 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    index = back.resolveIndex(0) orelse return error.UnexpectedNull;
+    back.remove(index);
+
+    iter = back.iterate();
+    try t.expectEqual(null, iter.next());
+}
+
+test "BothCul.remove" {
+    var both = BothCul{};
+    defer both.deinit(ta);
+
+    try both.append(ta, Union{ .float = 3.1415 });
+    try both.append(ta, Union{ .byte = 69 });
+    try both.append(ta, Union{ .array = .{ 23, 29, 31, 37 } });
+    try both.append(ta, Union.empty);
+
+    var fore_iter = both.iterateDir(.foreward);
+
+    try t.expectEqual(Union{ .float = 3.1415 }, fore_iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, fore_iter.next());
+    try t.expectEqual(Union{ .array = .{ 23, 29, 31, 37 } }, fore_iter.next());
+    try t.expectEqual(Union.empty, fore_iter.next());
+    try t.expectEqual(null, fore_iter.next());
+
+    var back_iter = fore_iter.reverse();
+
+    try t.expectEqual(Union.empty, back_iter.next());
+    try t.expectEqual(Union{ .array = .{ 23, 29, 31, 37 } }, back_iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, back_iter.next());
+    try t.expectEqual(Union{ .float = 3.1415 }, back_iter.next());
+    try t.expectEqual(null, back_iter.next());
+}
