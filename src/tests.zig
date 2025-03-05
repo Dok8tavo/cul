@@ -1183,4 +1183,21 @@ test "BothCul.remove" {
     try t.expectEqual(Union{ .byte = 69 }, back_iter.next());
     try t.expectEqual(Union{ .float = 3.1415 }, back_iter.next());
     try t.expectEqual(null, back_iter.next());
+
+    var index = both.resolveIndexDir(.foreward, 1) orelse return error.UnexpectedNull;
+    both.removeDir(.foreward, index);
+    fore_iter = .init(&both);
+
+    try t.expectEqual(Union{ .float = 3.1415 }, fore_iter.next());
+    try t.expectEqual(Union{ .array = .{ 23, 29, 31, 37 } }, fore_iter.next());
+    try t.expectEqual(Union.empty, fore_iter.next());
+    try t.expectEqual(null, fore_iter.next());
+
+    index = both.resolveIndexDir(.backward, 0) orelse return error.UnexpectedNull;
+    both.removeDir(.backward, index);
+    back_iter = .init(&both);
+
+    try t.expectEqual(Union{ .array = .{ 23, 29, 31, 37 } }, back_iter.next());
+    try t.expectEqual(Union{ .float = 3.1415 }, back_iter.next());
+    try t.expectEqual(null, back_iter.next());
 }
