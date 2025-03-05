@@ -1,5 +1,6 @@
 .{
-    .name = "cul",
+    .name = .cul,
+    .fingerprint = 0xA39C0CAB1341BCF2,
     .version = "0.0.0",
     .paths = .{
         "build.zig",
