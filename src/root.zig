@@ -187,9 +187,9 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
                     _ = try cul.bytes.addManyAsArray(allocator, size);
                     cul.setVariantUncheckedDir(
                         if (iter == .backward) .backward else .foreward,
+                        index,
                         comptime_tag,
                         payload,
-                        index,
                     );
                 },
             }
@@ -207,16 +207,16 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             switch (cul.getTagDir(dir, variant_index)) {
                 inline else => |comptime_tag| cul.removeVariantDir(
                     dir,
-                    comptime_tag,
                     variant_index,
+                    comptime_tag,
                 ),
             }
         }
 
         /// This function assumes that the given index is valid, and makes a copy of its
         /// upper-half.
-        pub fn removeVariant(cul: *Cul, comptime tag: Tag, variant_index: usize) void {
-            cul.removeVariantDir(iter.direction(), tag, variant_index);
+        pub fn removeVariant(cul: *Cul, variant_index: usize, comptime tag: Tag) void {
+            cul.removeVariantDir(iter.direction(), variant_index, tag);
         }
 
         /// This function assumes that the given index is valid, and makes a copy of its
@@ -224,8 +224,8 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         pub fn removeVariantDir(
             cul: *Cul,
             comptime dir: Direction,
-            comptime tag: Tag,
             variant_index: usize,
+            comptime tag: Tag,
         ) void {
             const size = comptime variantSize(tag);
 
@@ -251,7 +251,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         /// allocates more memory as necessary, and invalidates element pointers if additional
         /// memory is needed.
         pub fn insert(cul: *Cul, allocator: Allocator, variant_index: usize, u: Union) Allocator.Error!void {
-            try cul.insertDir(iter.direction(), allocator, variant_index, u);
+            try cul.insertDir(allocator, iter.direction(), variant_index, u);
         }
 
         /// Insert an element at the given byte index. It assumes the byte index is valid. It
@@ -259,15 +259,15 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         /// memory is needed.
         pub fn insertDir(
             cul: *Cul,
-            comptime dir: Direction,
             allocator: Allocator,
+            comptime dir: Direction,
             variant_index: usize,
             u: Union,
         ) Allocator.Error!void {
             switch (u) {
                 inline else => |payload, comptime_tag| try cul.insertVariantDir(
-                    dir,
                     allocator,
+                    dir,
                     variant_index,
                     comptime_tag,
                     payload,
@@ -285,7 +285,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             comptime tag: Tag,
             payload: Payload(tag),
         ) Allocator.Error!void {
-            try cul.insertVariantDir(iter.direction(), allocator, variant_index, tag, payload);
+            try cul.insertVariantDir(allocator, iter.direction(), variant_index, tag, payload);
         }
 
         /// Insert a variant at the given byte index. It assumes the byte index is valid. It
@@ -293,8 +293,8 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         /// memory is needed.
         pub fn insertVariantDir(
             cul: *Cul,
-            comptime dir: Direction,
             allocator: Allocator,
+            comptime dir: Direction,
             variant_index: usize,
             comptime tag: Tag,
             payload: Payload(tag),
@@ -325,7 +325,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             std.mem.copyBackwards(u8, dest, source);
 
             // setting the bytes
-            cul.setVariantUncheckedDir(dir, tag, payload, variant_index);
+            cul.setVariantUncheckedDir(dir, variant_index, tag, payload);
         }
 
         pub fn iterateDir(cul: *const Cul, comptime dir: Direction) IteratorDir(dir) {
@@ -423,16 +423,17 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
 
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a variant of the same size as the given `u: Union`.
-        pub fn set(cul: Cul, u: Union, variant_index: usize) SizeError!void {
-            try cul.setDir(iter.direction(), u, variant_index);
+        pub fn set(cul: Cul, variant_index: usize, u: Union) SizeError!void {
+            try cul.setDir(iter.direction(), variant_index, u);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a variant of the same size as the given `u: Union`.
         pub fn setDir(
             cul: Cul,
             comptime dir: Direction,
-            u: Union,
             variant_index: usize,
+            u: Union,
         ) SizeError!void {
             switch (u) {
                 inline else => |payload, comptime_tag| try cul.setVariantDir(
@@ -446,23 +447,24 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
 
         /// This function assumes that the `byte_index` is a valid byte index, and that the
         /// location is occupied by a variant of the same size as the given `u: Union`.
-        pub fn setUnchecked(cul: Cul, u: Union, variant_index: usize) void {
-            cul.setUncheckedDir(iter.direction(), u, variant_index);
+        pub fn setUnchecked(cul: Cul, variant_index: usize, u: Union) void {
+            cul.setUncheckedDir(iter.direction(), variant_index, u);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index, and that the
         /// location is occupied by a variant of the same size as the given `u: Union`.
         pub fn setUncheckedDir(
             cul: Cul,
             comptime dir: Direction,
-            u: Union,
             variant_index: usize,
+            u: Union,
         ) void {
             switch (u) {
                 inline else => |payload, comptime_tag| cul.setVariantUncheckedDir(
                     dir,
+                    variant_index,
                     comptime_tag,
                     payload,
-                    variant_index,
                 ),
             }
         }
@@ -471,6 +473,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         pub fn get(cul: Cul, variant_index: usize) Union {
             return cul.getDir(iter.direction(), variant_index);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index.
         pub fn getDir(cul: Cul, comptime dir: Direction, variant_index: usize) Union {
             const tag = cul.getTagDir(dir, variant_index);
@@ -479,7 +482,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
                 inline else => |comptime_tag| @unionInit(
                     Union,
                     @tagName(comptime_tag),
-                    cul.getPayloadUncheckedDir(dir, comptime_tag, payload_index),
+                    cul.getPayloadUncheckedDir(comptime_tag, dir, payload_index),
                 ),
             };
         }
@@ -488,12 +491,13 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         /// the location is occupied by a payload of the same size as the given payload.
         pub fn setVariant(
             cul: Cul,
+            variant_index: usize,
             comptime tag: Tag,
             payload: Payload(tag),
-            variant: usize,
         ) SizeError!void {
-            try cul.setVariantDir(iter.direction(), tag, payload, variant);
+            try cul.setVariantDir(iter.direction(), variant_index, tag, payload);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a payload of the same size as the given payload.
         pub fn setVariantDir(
@@ -504,45 +508,47 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             variant_index: usize,
         ) SizeError!void {
             try cul.checkSize(tag, variant_index);
-            cul.setVariantUncheckedDir(dir, tag, payload, variant_index);
+            cul.setVariantUncheckedDir(dir, variant_index, tag, payload);
         }
 
         /// This function assumes that the `byte_index` is a valid byte index, and that the
         /// location is occupied by a payload of the same size as the given payload.
         pub fn setVariantUnchecked(
             cul: Cul,
+            variant_index: usize,
             comptime tag: Tag,
             payload: Payload(tag),
-            variant_index: usize,
         ) void {
-            cul.setVariantUncheckedDir(iter.direction(), tag, payload, variant_index);
+            cul.setVariantUncheckedDir(iter.direction(), variant_index, tag, payload);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index, and that the
         /// location is occupied by a payload of the same size as the given payload.
         pub fn setVariantUncheckedDir(
             cul: Cul,
             comptime dir: Direction,
+            variant_index: usize,
             comptime tag: Tag,
             payload: Payload(tag),
-            variant_index: usize,
         ) void {
             const payload_index = payloadIndexDir(dir, variant_index);
-            cul.setTagUncheckedDir(dir, tag, variant_index);
-            cul.setPayloadUncheckedDir(dir, tag, payload, payload_index);
+            cul.setTagUncheckedDir(dir, variant_index, tag);
+            cul.setPayloadUncheckedDir(tag, dir, payload_index, payload);
         }
 
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a payload of the same size as the given payload.
-        pub fn checkTag(cul: Cul, comptime tag: Tag, tag_index: usize) TagError!void {
-            return cul.checkTagDir(iter.direction(), tag, tag_index);
+        pub fn checkTag(cul: Cul, tag_index: usize, comptime tag: Tag) TagError!void {
+            return cul.checkTagDir(iter.direction(), tag_index, tag);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a payload of the same size as the given payload.
         pub fn checkTagDir(
             cul: Cul,
             comptime dir: Direction,
-            comptime tag: Tag,
             tag_index: usize,
+            comptime tag: Tag,
         ) TagError!void {
             const current_tag = cul.getTagDir(dir, tag_index);
             if (current_tag != tag)
@@ -554,23 +560,24 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         pub fn setPayload(
             cul: Cul,
             comptime tag: Tag,
-            payload: Payload(tag),
             payload_index: usize,
+            payload: Payload(tag),
         ) TagError!void {
-            cul.setPayloadDir(iter.direction(), tag, payload, payload_index);
+            cul.setPayloadDir(iter.direction(), payload_index, tag, payload);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a similarily-tagged payload as the given payload.
         pub fn setPayloadDir(
             cul: Cul,
-            comptime dir: Direction,
             comptime tag: Tag,
-            payload: Payload(tag),
+            comptime dir: Direction,
             payload_index: usize,
+            payload: Payload(tag),
         ) void {
             const tag_index = tagIndexDir(dir, payload_index);
-            try cul.checkTagDir(dir, tag, tag_index);
-            cul.setPayloadUncheckedDir(dir, tag, payload, payload_index);
+            try cul.checkTagDir(dir, tag_index, tag);
+            cul.setPayloadUncheckedDir(dir, payload_index, tag, payload);
         }
 
         /// This function assumes that the `byte_index` is a valid byte index, and that the
@@ -578,21 +585,22 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         pub fn setPayloadUnchecked(
             cul: Cul,
             comptime tag: Tag,
-            payload: Payload(tag),
             payload_index: usize,
+            payload: Payload(tag),
         ) void {
-            cul.setPayloadUncheckedDir(iter.direction(), tag, payload, payload_index);
+            cul.setPayloadUncheckedDir(tag, iter.direction(), payload_index, payload);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index, and that the
         /// location is occupied by a similarily-tagged payload as the given payload.
         pub fn setPayloadUncheckedDir(
             cul: Cul,
-            comptime dir: Direction,
             comptime tag: Tag,
-            payload: Payload(tag),
+            comptime dir: Direction,
             payload_index: usize,
+            payload: Payload(tag),
         ) void {
-            cul.setTypeDir(dir, Payload(tag), payload, payload_index);
+            cul.setTypeDir(dir, payload_index, Payload(tag), payload);
         }
 
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
@@ -602,49 +610,52 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             comptime tag: Tag,
             payload_index: usize,
         ) TagError!Payload(tag) {
-            return try cul.getPayloadDir(iter.direction(), tag, payload_index);
+            return try cul.getPayloadDir(iter.direction(), payload_index, tag);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a payload tagged by the given `tag`.
         pub fn getPayloadDir(
             cul: Cul,
-            comptime dir: Direction,
             comptime tag: Tag,
+            comptime dir: Direction,
             payload_index: usize,
         ) TagError!Payload(tag) {
             const tag_index = tagIndexDir(dir, payload_index);
-            try cul.checkTagDir(dir, tag, tag_index);
-            return cul.getPayloadUncheckedDir(dir, tag, payload_index);
+            try cul.checkTagDir(dir, tag_index, tag);
+            return cul.getPayloadUncheckedDir(dir, payload_index, tag);
         }
 
         /// This function assumes that the `byte_index` is a valid byte index, and that the
         /// location is occupied by a payload tagged by the given `tag`.
         pub fn getPayloadUnchecked(cul: Cul, comptime tag: Tag, payload_index: usize) Payload(tag) {
-            return cul.getPayloadUncheckedDir(iter.direction(), tag, payload_index);
+            return cul.getPayloadUncheckedDir(tag, iter.direction(), payload_index);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index, and that the
         /// location is occupied by a payload tagged by the given `tag`.
         pub fn getPayloadUncheckedDir(
             cul: Cul,
-            comptime dir: Direction,
             comptime tag: Tag,
+            comptime dir: Direction,
             payload_index: usize,
         ) Payload(tag) {
-            return cul.getTypeDir(dir, Payload(tag), payload_index);
+            return cul.getTypeDir(dir, payload_index, Payload(tag));
         }
 
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a payload of the same size as the given payload.
-        pub fn checkSize(cul: Cul, comptime candidate_tag: Tag, tag_index: usize) SizeError!void {
-            return cul.checkSizeDir(iter.direction(), candidate_tag, tag_index);
+        pub fn checkSize(cul: Cul, tag_index: usize, comptime candidate_tag: Tag) SizeError!void {
+            return cul.checkSizeDir(iter.direction(), tag_index, candidate_tag);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a payload of the same size as the given payload.
         pub fn checkSizeDir(
             cul: Cul,
             comptime dir: Direction,
-            comptime candidate_tag: Tag,
             tag_index: usize,
+            comptime candidate_tag: Tag,
         ) SizeError!void {
             const current_tag = cul.getTagDir(dir, tag_index);
             switch (current_tag) {
@@ -664,7 +675,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
         /// the location is occupied by a payload of the same size as the given payload. Accessing
         /// the payload just after calling this function is undefined behavior.
-        pub fn setTag(cul: Cul, comptime tag: Tag, tag_index: usize) SizeError!void {
+        pub fn setTag(cul: Cul, tag_index: usize, comptime tag: Tag) SizeError!void {
             try cul.setTagDir(iter.direction(), tag, tag_index);
         }
         /// This function assumes that the `byte_index` is a valid byte index. It checks whether
@@ -673,8 +684,8 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         pub fn setTagDir(
             cul: Cul,
             comptime dir: Direction,
-            comptime tag: Tag,
             tag_index: usize,
+            comptime tag: Tag,
         ) SizeError!void {
             try cul.checkSizeDir(dir, tag, tag_index);
             cul.setTagUncheckedDir(dir, tag, tag_index);
@@ -683,23 +694,24 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         /// This function assumes that the `byte_index` is a valid byte index, and that the
         /// location is occupied by a payload of the same size as the given payload. Accessing the
         /// payload just after calling this function is undefined behavior.
-        pub fn setTagUnchecked(cul: Cul, comptime tag: Tag, tag_index: usize) void {
-            cul.setTagUncheckedDir(iter.direction(), tag, tag_index);
+        pub fn setTagUnchecked(cul: Cul, tag_index: usize, comptime tag: Tag) void {
+            cul.setTagUncheckedDir(iter.direction(), tag_index, tag);
         }
+
         /// This function assumes that the `byte_index` is a valid byte index, and that the
         /// location is occupied by a payload of the same size as the given payload. Accessing the
         /// payload just after calling this function is undefined behavior.
         pub fn setTagUncheckedDir(
             cul: Cul,
             comptime dir: Direction,
-            comptime tag: Tag,
             tag_index: usize,
+            comptime tag: Tag,
         ) void {
-            cul.setTypeDir(dir, Tag, tag, tag_index);
-            if (iter == .bothward and payloadSize(tag) != 0) cul.setTypeDir(dir, Tag, tag, switch (dir) {
+            cul.setTypeDir(dir, tag_index, Tag, tag);
+            if (iter == .bothward and payloadSize(tag) != 0) cul.setTypeDir(dir, switch (dir) {
                 .backward => tag_index - payloadSize(tag) - tag_size,
                 .foreward => tag_index + payloadSize(tag) + tag_size,
-            });
+            }, Tag, tag);
         }
 
         /// This function assumes that the given `byte_index` is a valid byte index.
@@ -708,7 +720,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         }
         /// This function assumes that the given `byte_index` is a valid byte index.
         pub fn getTagDir(cul: Cul, comptime dir: Direction, tag_index: usize) Tag {
-            return cul.getTypeDir(dir, Tag, tag_index);
+            return cul.getTypeDir(dir, tag_index, Tag);
         }
 
         /// This function assumes that the given `byte_index` is a valid byte index.
@@ -720,34 +732,34 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             return cul.getTypeBytesDir(dir, Tag, tag_index);
         }
 
-        pub fn setType(cul: Cul, comptime T: type, value: T, index: usize) void {
-            cul.setTypeDir(iter.direction(), T, value, index);
+        pub fn setType(cul: Cul, index: usize, comptime T: type, value: T) void {
+            cul.setTypeDir(iter.direction(), index, T, value);
         }
         pub fn setTypeDir(
             cul: Cul,
             comptime dir: Direction,
+            index: usize,
             comptime T: type,
             value: T,
-            index: usize,
         ) void {
-            comp.compress(T, value, cul.getTypeBytesDir(dir, T, index));
+            comp.compress(T, value, cul.getTypeBytesDir(dir, index, T));
         }
 
-        pub fn getType(cul: Cul, comptime T: type, index: usize) T {
-            return cul.getTypeDir(iter.direction(), T, index);
+        pub fn getType(cul: Cul, index: usize, comptime T: type) T {
+            return cul.getTypeDir(iter.direction(), index, T);
         }
-        pub fn getTypeDir(cul: Cul, comptime dir: Direction, comptime T: type, index: usize) T {
-            return comp.decompress(T, cul.getTypeBytesDir(dir, T, index));
+        pub fn getTypeDir(cul: Cul, comptime dir: Direction, index: usize, comptime T: type) T {
+            return comp.decompress(T, cul.getTypeBytesDir(dir, index, T));
         }
 
-        pub fn getTypeBytes(cul: Cul, comptime T: type, index: usize) *[comp.compressedSizeOf(T)]Byte {
-            return cul.getTypeBytesDir(iter.direction(), T, index);
+        pub fn getTypeBytes(cul: Cul, index: usize, comptime T: type) *[comp.compressedSizeOf(T)]Byte {
+            return cul.getTypeBytesDir(iter.direction(), index, T);
         }
         pub fn getTypeBytesDir(
             cul: Cul,
             comptime dir: Direction,
-            comptime T: type,
             index: usize,
+            comptime T: type,
         ) *[comp.compressedSizeOf(T)]Byte {
             return cul.getBytesArrayDir(dir, index, comp.compressedSizeOf(T));
         }
