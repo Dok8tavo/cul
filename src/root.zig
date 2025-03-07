@@ -195,10 +195,14 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             }
         }
 
+        /// This function assumes that the given index is valid, and makes a copy of its
+        /// upper-half.
         pub fn remove(cul: *Cul, variant_index: usize) void {
             cul.removeDir(iter.direction(), variant_index);
         }
 
+        /// This function assumes that the given index is valid, and makes a copy of its
+        /// upper-half.
         pub fn removeDir(cul: *Cul, comptime dir: Direction, variant_index: usize) void {
             switch (cul.getTagDir(dir, variant_index)) {
                 inline else => |comptime_tag| cul.removeVariantDir(
@@ -209,10 +213,14 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             }
         }
 
+        /// This function assumes that the given index is valid, and makes a copy of its
+        /// upper-half.
         pub fn removeVariant(cul: *Cul, comptime tag: Tag, variant_index: usize) void {
             cul.removeVariantDir(iter.direction(), tag, variant_index);
         }
 
+        /// This function assumes that the given index is valid, and makes a copy of its
+        /// upper-half.
         pub fn removeVariantDir(
             cul: *Cul,
             comptime dir: Direction,

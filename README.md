@@ -59,14 +59,21 @@ The real problem is that the location of an item can't be deduced anymore from i
 
 ### Comparison
 
-|                    | `CompactUnionList` | `std.MultiArrayList`                         | `std.ArrayList`        |
-| ------------------ | ------------------ | -------------------------------------------- | ---------------------- |
-| Storage            | byte-by-byte       | tag and payload in separate contiguous lists | in a contiguous list   |
-| Unused bytes       | 🟢 none            | 🔴 yes                                       | 🔴 yes                 |
-| Padding            | 🟢 none            | 🟠 decent                                    | 🔴 terrible            |
-| Memory Consumption | 🟢 most efficient  | 🟠 decent                                    | 🔴 terrible            |
-| Random Access      | 🔴 terrible: O(n)  | 🟢 efficient O(1)                            | 🟢 most efficient O(1) |
-| Iteration          | 🟠 decent: O(1)    | 🟢 efficient O(1)                            | 🟢 most efficient O(1) |
+|                    | `CompactUnionList`        | `std.MultiArrayList`              | `std.ArrayList`            |
+| ------------------ | ------------------------- | --------------------------------- | -------------------------- |
+| Storage            | byte-by-byte              | tag and payload in separate lists | in a contiguous list       |
+| Unused bytes       | 🟢 none: `O(1)`           | 🔴 yes: `O(nD)`                 | 🔴 yes: `O(nD)`              |
+| Padding            | 🟢 none: `O(1)`           | 🟠 decent `O(n(p+t))`           | 🔴 terrible `O(n(v+t))`      |
+| Memory Consumption | 🟢 most efficient: `O(n)` | 🟠 decent `O(n(p+t+u))`         | 🔴 terrible `O(n(v+t+u))`    |
+| Random Access      | 🔴 terrible: `O(nc)`      | 🟢 efficient `O(1)`             | 🟢 most efficient `O(1)`     |
+| Iteration          | 🟠 decent: `O(c)`         | 🟢 efficient `O(1)`             | 🟢 most efficient `O(1)`     |
+
+- n: number of items,
+- u: difference between greatest and smallest variant,
+- v: variant padding,
+- t: tag padding,
+- p: payload padding,
+- c: compression/decompression complexity
 
 ### Example
 
