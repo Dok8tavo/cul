@@ -31,14 +31,14 @@ pub const Byte = @Type(.{ .int = .{
 } });
 
 pub const With = struct {
-    iteration: Iteration = .foreward,
+    iteration: Iteration = .forward,
     compression: Compression = .cheap,
 };
 
 pub const Iteration = enum {
-    /// Foreward iteration will cause the cul to store the variants as `tag + payload`, enabling to
+    /// Forward iteration will cause the cul to store the variants as `tag + payload`, enabling to
     /// iterate over them first-in-first-out, using `Iterator.next`.
-    foreward,
+    forward,
     /// Backward iteration will cause the cul to store the variants as `payload + tag`, enabling to
     /// iterate over them first-in-last-out, using `Iterator.prev`.
     backward,
@@ -49,11 +49,11 @@ pub const Iteration = enum {
 
     pub fn direction(comptime iteration: Iteration) Direction {
         return switch (iteration) {
-            .foreward => .foreward,
+            .forward => .forward,
             .backward => .backward,
             .bothward => @compileError(
                 \\There's no default direction when using bothward iteration.
-                \\Try using a `Dir` version of the function, or either foreward or backward
+                \\Try using a `Dir` version of the function, or either forward or backward
             ++ " iteration."),
         };
     }
@@ -62,14 +62,14 @@ pub const Iteration = enum {
 /// When indexing the bytes of a slice, does the index represents the start or the end.
 pub const Direction = enum {
     /// The byte index refers to the starting byte (the first byte)
-    foreward,
+    forward,
     /// The byte index refers to the ending byte (the byte after the last byte)
     backward,
 
     pub fn reverse(comptime dir: Direction) Direction {
         return switch (dir) {
-            .foreward => .backward,
-            .backward => .foreward,
+            .forward => .backward,
+            .backward => .forward,
         };
     }
 };
@@ -186,7 +186,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
                         if (iter == .backward) size else 0;
                     _ = try cul.bytes.addManyAsArray(allocator, size);
                     cul.setVariantUncheckedDir(
-                        if (iter == .backward) .backward else .foreward,
+                        if (iter == .backward) .backward else .forward,
                         index,
                         comptime_tag,
                         payload,
@@ -231,7 +231,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
 
             // moving the higher elements
             const dest, const source = switch (dir) {
-                .foreward => .{
+                .forward => .{
                     cul.bytes.items[variant_index .. cul.bytes.items.len - size],
                     cul.bytes.items[variant_index + size .. cul.bytes.items.len],
                 },
@@ -301,7 +301,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         ) Allocator.Error!void {
             const size = variantSize(tag);
 
-            // unsure capacity is available
+            // ensure capacity is available
             try cul.bytes.ensureUnusedCapacity(allocator, size);
 
             const old_len = cul.bytes.items.len;
@@ -312,7 +312,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
 
             // moving the higher elements
             const dest, const source = switch (dir) {
-                .foreward => .{
+                .forward => .{
                     cul.bytes.items[variant_index + size .. new_len],
                     cul.bytes.items[variant_index..old_len],
                 },
@@ -350,7 +350,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
                         .cul = cul,
                         .idx = switch (dir) {
                             .backward => cul.bytes.items.len,
-                            .foreward => 0,
+                            .forward => 0,
                         },
                     };
                 }
@@ -370,7 +370,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
 
                     it.idx = switch (dir) {
                         .backward => it.idx - len,
-                        .foreward => it.idx + len,
+                        .forward => it.idx + len,
                     };
                 }
 
@@ -389,7 +389,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
                 pub fn ended(it: CulIterator) bool {
                     return it.idx == switch (dir) {
                         .backward => 0,
-                        .foreward => it.cul.bytes.items.len,
+                        .forward => it.cul.bytes.items.len,
                     };
                 }
 
@@ -710,7 +710,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             cul.setTypeDir(dir, tag_index, Tag, tag);
             if (iter == .bothward and payloadSize(tag) != 0) cul.setTypeDir(dir, switch (dir) {
                 .backward => tag_index - payloadSize(tag) - tag_size,
-                .foreward => tag_index + payloadSize(tag) + tag_size,
+                .forward => tag_index + payloadSize(tag) + tag_size,
             }, Tag, tag);
         }
 
@@ -775,7 +775,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         ) *[len]Byte {
             checkDir(dir);
             return switch (dir) {
-                .foreward => cul.bytes.items[byte_index..][0..len],
+                .forward => cul.bytes.items[byte_index..][0..len],
                 .backward => cul.bytes.items[byte_index - len ..][0..len],
             };
         }
@@ -791,7 +791,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         ) []Byte {
             checkDir(dir);
             return switch (dir) {
-                .foreward => cul.bytes.items[index .. index + len],
+                .forward => cul.bytes.items[index .. index + len],
                 .backward => cul.bytes.items[index - len .. index],
             };
         }
@@ -826,7 +826,7 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         pub fn payloadIndexDir(comptime dir: Direction, tag_index: usize) usize {
             return switch (dir) {
                 // |tag_index| TAG(tag_size) |payload_index| PAYLOAD(...) |...| ...
-                .foreward => tag_index + tag_size,
+                .forward => tag_index + tag_size,
                 // ... |...| PAYLOAD(...) |payload_index| TAG(tag_size) |tag_index|
                 .backward => tag_index - tag_size,
             };
@@ -843,16 +843,22 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         pub fn tagIndexDir(comptime dir: Direction, payload_index: usize) usize {
             return switch (dir) {
                 // |tag_index| TAG(tag_size) |payload_index| PAYLOAD(...) |...| ...
-                .foreward => payload_index - tag_size,
+                .forward => payload_index - tag_size,
                 // ... |...| PAYLOAD(...) |payload_index| TAG(tag_size) |tag_index|
                 .backward => payload_index + tag_size,
             };
         }
 
+        fn ResizeError(comptime current_tag: Tag, comptime candidate_tag: Tag) type {
+            const candidate_size = variantSize(candidate_tag);
+            const current_size = variantSize(current_tag);
+            return if (candidate_size <= current_size) error{} else Allocator.Error;
+        }
+
         inline fn checkDir(comptime dir: Direction) void {
             const is_wrong = switch (dir) {
-                .backward => iter == .foreward,
-                .foreward => iter == .backward,
+                .backward => iter == .forward,
+                .forward => iter == .backward,
             };
 
             if (is_wrong) @compileError(std.fmt.comptimePrint(

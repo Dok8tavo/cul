@@ -35,7 +35,7 @@ const SByte = @Type(.{ .int = .{
 
 const UByte = root.Byte;
 const CompactUnionList = root.CompactUnionList;
-const ForeCul = CompactUnionList(Union, .{ .iteration = .foreward });
+const ForCul = CompactUnionList(Union, .{ .iteration = .forward });
 const BackCul = CompactUnionList(Union, .{ .iteration = .backward });
 const BothCul = CompactUnionList(Union, .{ .iteration = .bothward });
 
@@ -49,17 +49,17 @@ const Union = union(enum) {
 };
 
 test "Cul.deinit" {
-    var cul = try ForeCul.initBytesCapacity(ta, 12);
+    var cul = try ForCul.initBytesCapacity(ta, 12);
     cul.deinit(ta);
 }
 
 test "Cul.payloadSize" {
-    try t.expectEqual(0, ForeCul.payloadSize(.empty));
-    try t.expectEqual(1, ForeCul.payloadSize(.byte));
-    try t.expectEqual(1, ForeCul.payloadSize(.signed_byte));
-    try t.expectEqual(4, ForeCul.payloadSize(.float));
-    try t.expectEqual(32, ForeCul.payloadSize(.big_int));
-    try t.expectEqual(4, ForeCul.payloadSize(.array));
+    try t.expectEqual(0, ForCul.payloadSize(.empty));
+    try t.expectEqual(1, ForCul.payloadSize(.byte));
+    try t.expectEqual(1, ForCul.payloadSize(.signed_byte));
+    try t.expectEqual(4, ForCul.payloadSize(.float));
+    try t.expectEqual(32, ForCul.payloadSize(.big_int));
+    try t.expectEqual(4, ForCul.payloadSize(.array));
 
     try t.expectEqual(0, BackCul.payloadSize(.empty));
     try t.expectEqual(1, BackCul.payloadSize(.byte));
@@ -77,12 +77,12 @@ test "Cul.payloadSize" {
 }
 
 test "Cul.variantSize" {
-    try t.expectEqual(1 + 0, ForeCul.variantSize(.empty));
-    try t.expectEqual(1 + 1, ForeCul.variantSize(.byte));
-    try t.expectEqual(1 + 1, ForeCul.variantSize(.signed_byte));
-    try t.expectEqual(1 + 4, ForeCul.variantSize(.float));
-    try t.expectEqual(1 + 32, ForeCul.variantSize(.big_int));
-    try t.expectEqual(1 + 4, ForeCul.variantSize(.array));
+    try t.expectEqual(1 + 0, ForCul.variantSize(.empty));
+    try t.expectEqual(1 + 1, ForCul.variantSize(.byte));
+    try t.expectEqual(1 + 1, ForCul.variantSize(.signed_byte));
+    try t.expectEqual(1 + 4, ForCul.variantSize(.float));
+    try t.expectEqual(1 + 32, ForCul.variantSize(.big_int));
+    try t.expectEqual(1 + 4, ForCul.variantSize(.array));
 
     try t.expectEqual(1 + 0, BackCul.variantSize(.empty));
     try t.expectEqual(1 + 1, BackCul.variantSize(.byte));
@@ -102,36 +102,36 @@ test "Cul.variantSize" {
 
 test "Cul.tagIndex" {
     // |0| TAG(1) |1| PAYLOAD(...) |...|
-    try t.expectEqual(0, ForeCul.tagIndex(1));
+    try t.expectEqual(0, ForCul.tagIndex(1));
 
     // |...| PAYLOAD(...) |5| TAG(1) |6|
     try t.expectEqual(6, BackCul.tagIndex(5));
 
     // |0| TAG(1) |1| PAYLOAD(4) |5| TAG(1) |6|
-    try t.expectEqual(0, BothCul.tagIndexDir(.foreward, 1));
+    try t.expectEqual(0, BothCul.tagIndexDir(.forward, 1));
     try t.expectEqual(6, BothCul.tagIndexDir(.backward, 5));
 }
 
 test "Cul.payloadIndex" {
     // |0| TAG(1) |1| PAYLOAD(...) |...|
-    try t.expectEqual(1, ForeCul.payloadIndex(0));
+    try t.expectEqual(1, ForCul.payloadIndex(0));
 
     // |...| PAYLOAD(...) |5| TAG(1) |6|
     try t.expectEqual(5, BackCul.payloadIndex(6));
 
     // |0| TAG(1) |1| PAYLOAD(4) |5| TAG(1) |6|
-    try t.expectEqual(1, BothCul.payloadIndexDir(.foreward, 0));
+    try t.expectEqual(1, BothCul.payloadIndexDir(.forward, 0));
     try t.expectEqual(5, BothCul.payloadIndexDir(.backward, 6));
 }
 
 test "ForeCul.getBytes{Slice&Array}" {
-    var fore = try ForeCul.initBytesCapacity(ta, 69);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 69);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
-    try t.expectEqual(fore.bytes.items[6..][0..9], fore.getBytesSlice(6, 9));
-    try t.expectEqual(fore.bytes.items[6..][0..9], fore.getBytesArray(6, 9));
+    try t.expectEqual(forw.bytes.items[6..][0..9], forw.getBytesSlice(6, 9));
+    try t.expectEqual(forw.bytes.items[6..][0..9], forw.getBytesArray(6, 9));
 }
 
 test "BackCul.getBytes{Slice&Array}" {
@@ -150,8 +150,8 @@ test "BothCul.getBytes{Slice&Array}Dir" {
 
     both.bytes.expandToCapacity();
 
-    try t.expectEqual(both.bytes.items[6..][0..9], both.getBytesSliceDir(.foreward, 6, 9));
-    try t.expectEqual(both.bytes.items[6..][0..9], both.getBytesArrayDir(.foreward, 6, 9));
+    try t.expectEqual(both.bytes.items[6..][0..9], both.getBytesSliceDir(.forward, 6, 9));
+    try t.expectEqual(both.bytes.items[6..][0..9], both.getBytesArrayDir(.forward, 6, 9));
     try t.expectEqual(
         both.bytes.items[4 - 2 ..][0..2],
         both.getBytesSliceDir(.backward, 4, 2),
@@ -163,18 +163,18 @@ test "BothCul.getBytes{Slice&Array}Dir" {
 }
 
 test "ForeCul.getTypeBytes" {
-    var fore = try ForeCul.initBytesCapacity(ta, 16);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 16);
+    defer forw.deinit(ta);
 
-    fore.bytes.appendSliceAssumeCapacity(&.{
+    forw.bytes.appendSliceAssumeCapacity(&.{
         2,  3,  5,  7,
         11, 13, 17, 19,
         23, 29, 31, 37,
         41, 43, 47, 53,
     });
 
-    try t.expectEqualSlices(UByte, &[_]UByte{ 2, 3, 5, 7 }, fore.getTypeBytes(0, [4]UByte));
-    try t.expectEqualSlices(UByte, &[_]UByte{ 37, 41, 43 }, fore.getTypeBytes(11, [3]UByte));
+    try t.expectEqualSlices(UByte, &[_]UByte{ 2, 3, 5, 7 }, forw.getTypeBytes(0, [4]UByte));
+    try t.expectEqualSlices(UByte, &[_]UByte{ 37, 41, 43 }, forw.getTypeBytes(11, [3]UByte));
 }
 
 test "BackCul.getTypeBytes" {
@@ -203,7 +203,7 @@ test "BothCul.getTypeBytesDir" {
     try t.expectEqualSlices(
         UByte,
         &[_]UByte{ 0, 1, 4, 9 },
-        both.getTypeBytesDir(.foreward, 0, [4]UByte),
+        both.getTypeBytesDir(.forward, 0, [4]UByte),
     );
     try t.expectEqualSlices(
         UByte,
@@ -214,7 +214,7 @@ test "BothCul.getTypeBytesDir" {
     try t.expectEqualSlices(
         UByte,
         &[_]UByte{ 36, 49, 64 },
-        both.getTypeBytesDir(.foreward, 6, [3]UByte),
+        both.getTypeBytesDir(.forward, 6, [3]UByte),
     );
     try t.expectEqualSlices(
         UByte,
@@ -224,14 +224,14 @@ test "BothCul.getTypeBytesDir" {
 }
 
 test "ForeCul.getType" {
-    var fore = try ForeCul.initBytesCapacity(ta, 8);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 8);
+    defer forw.deinit(ta);
 
-    try fore.bytes.fixedWriter().writeInt(u32, 3_141_592_653, endian);
-    try fore.bytes.fixedWriter().writeInt(u32, 2_718_281_828, endian);
+    try forw.bytes.fixedWriter().writeInt(u32, 3_141_592_653, endian);
+    try forw.bytes.fixedWriter().writeInt(u32, 2_718_281_828, endian);
 
-    try t.expectEqual(3_141_592_653, fore.getType(0, u32));
-    try t.expectEqual(2_718_281_828, fore.getType(4, u32));
+    try t.expectEqual(3_141_592_653, forw.getType(0, u32));
+    try t.expectEqual(2_718_281_828, forw.getType(4, u32));
 }
 
 test "BackCul.getType" {
@@ -252,20 +252,20 @@ test "BothCul.getTypeDir" {
     try both.bytes.fixedWriter().writeInt(u32, 1_324_717_957, endian);
     try both.bytes.fixedWriter().writeInt(u32, 1_176_322_283, endian);
 
-    try t.expectEqual(1_324_717_957, both.getTypeDir(.foreward, 0, u32));
-    try t.expectEqual(1_176_322_283, both.getTypeDir(.foreward, 4, u32));
+    try t.expectEqual(1_324_717_957, both.getTypeDir(.forward, 0, u32));
+    try t.expectEqual(1_176_322_283, both.getTypeDir(.forward, 4, u32));
     try t.expectEqual(1_324_717_957, both.getTypeDir(.backward, 4, u32));
     try t.expectEqual(1_176_322_283, both.getTypeDir(.backward, 8, u32));
 }
 
 test "ForeCul.setType" {
-    var fore = try ForeCul.initBytesCapacity(ta, 16);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 16);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
-    fore.setType(1, struct { bool, u32 }, .{ true, 69 });
-    try t.expectEqual(.{ true, 69 }, fore.getType(1, struct { bool, u32 }));
+    forw.setType(1, struct { bool, u32 }, .{ true, 69 });
+    try t.expectEqual(.{ true, 69 }, forw.getType(1, struct { bool, u32 }));
 }
 
 test "BackCul.setType" {
@@ -284,32 +284,32 @@ test "BothCul.setTypeDir" {
 
     both.bytes.expandToCapacity();
 
-    both.setTypeDir(.foreward, 5, []const UByte, "Hello world!");
-    try t.expectEqualStrings("Hello world!", both.getTypeDir(.foreward, 5, []const UByte));
+    both.setTypeDir(.forward, 5, []const UByte, "Hello world!");
+    try t.expectEqualStrings("Hello world!", both.getTypeDir(.forward, 5, []const UByte));
 
     both.setTypeDir(.backward, 12, [2:2]u7, .{ 69, 42 });
     try t.expectEqual([_:2]u7{ 69, 42 }, both.getTypeDir(.backward, 12, [2:2]u7));
 }
 
 test "ForeCul.getTag" {
-    var fore = try ForeCul.initBytesCapacity(ta, 8);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 8);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
-    fore.setType(0, ForeCul.Tag, .empty);
-    fore.setType(1, ForeCul.Tag, .byte);
-    fore.setType(2, ForeCul.Tag, .signed_byte);
-    fore.setType(3, ForeCul.Tag, .float);
-    fore.setType(4, ForeCul.Tag, .big_int);
-    fore.setType(5, ForeCul.Tag, .array);
+    forw.setType(0, ForCul.Tag, .empty);
+    forw.setType(1, ForCul.Tag, .byte);
+    forw.setType(2, ForCul.Tag, .signed_byte);
+    forw.setType(3, ForCul.Tag, .float);
+    forw.setType(4, ForCul.Tag, .big_int);
+    forw.setType(5, ForCul.Tag, .array);
 
-    try t.expectEqual(.empty, fore.getTag(0));
-    try t.expectEqual(.byte, fore.getTag(1));
-    try t.expectEqual(.signed_byte, fore.getTag(2));
-    try t.expectEqual(.float, fore.getTag(3));
-    try t.expectEqual(.big_int, fore.getTag(4));
-    try t.expectEqual(.array, fore.getTag(5));
+    try t.expectEqual(.empty, forw.getTag(0));
+    try t.expectEqual(.byte, forw.getTag(1));
+    try t.expectEqual(.signed_byte, forw.getTag(2));
+    try t.expectEqual(.float, forw.getTag(3));
+    try t.expectEqual(.big_int, forw.getTag(4));
+    try t.expectEqual(.array, forw.getTag(5));
 }
 
 test "BackCul.getTag" {
@@ -339,19 +339,19 @@ test "BothCul.getTagDir" {
 
     both.bytes.expandToCapacity();
 
-    both.setTypeDir(.foreward, 0, BothCul.Tag, .empty);
-    both.setTypeDir(.foreward, 1, BothCul.Tag, .byte);
-    both.setTypeDir(.foreward, 2, BothCul.Tag, .signed_byte);
+    both.setTypeDir(.forward, 0, BothCul.Tag, .empty);
+    both.setTypeDir(.forward, 1, BothCul.Tag, .byte);
+    both.setTypeDir(.forward, 2, BothCul.Tag, .signed_byte);
     both.setTypeDir(.backward, 4, BothCul.Tag, .float);
     both.setTypeDir(.backward, 5, BothCul.Tag, .big_int);
     both.setTypeDir(.backward, 6, BothCul.Tag, .array);
 
-    try t.expectEqual(.empty, both.getTagDir(.foreward, 0));
-    try t.expectEqual(.byte, both.getTagDir(.foreward, 1));
-    try t.expectEqual(.signed_byte, both.getTagDir(.foreward, 2));
-    try t.expectEqual(.float, both.getTagDir(.foreward, 3));
-    try t.expectEqual(.big_int, both.getTagDir(.foreward, 4));
-    try t.expectEqual(.array, both.getTagDir(.foreward, 5));
+    try t.expectEqual(.empty, both.getTagDir(.forward, 0));
+    try t.expectEqual(.byte, both.getTagDir(.forward, 1));
+    try t.expectEqual(.signed_byte, both.getTagDir(.forward, 2));
+    try t.expectEqual(.float, both.getTagDir(.forward, 3));
+    try t.expectEqual(.big_int, both.getTagDir(.forward, 4));
+    try t.expectEqual(.array, both.getTagDir(.forward, 5));
 
     try t.expectEqual(.empty, both.getTagDir(.backward, 1));
     try t.expectEqual(.byte, both.getTagDir(.backward, 2));
@@ -362,24 +362,24 @@ test "BothCul.getTagDir" {
 }
 
 test "ForeCul.setTagUnchecked" {
-    var fore = try ForeCul.initBytesCapacity(ta, 16);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 16);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
-    fore.setTagUnchecked(0, .empty);
-    fore.setTagUnchecked(1, .byte);
-    fore.setTagUnchecked(2, .signed_byte);
-    fore.setTagUnchecked(3, .float);
-    fore.setTagUnchecked(4, .big_int);
-    fore.setTagUnchecked(5, .array);
+    forw.setTagUnchecked(0, .empty);
+    forw.setTagUnchecked(1, .byte);
+    forw.setTagUnchecked(2, .signed_byte);
+    forw.setTagUnchecked(3, .float);
+    forw.setTagUnchecked(4, .big_int);
+    forw.setTagUnchecked(5, .array);
 
-    try t.expectEqual(.empty, fore.getTag(0));
-    try t.expectEqual(.byte, fore.getTag(1));
-    try t.expectEqual(.signed_byte, fore.getTag(2));
-    try t.expectEqual(.float, fore.getTag(3));
-    try t.expectEqual(.big_int, fore.getTag(4));
-    try t.expectEqual(.array, fore.getTag(5));
+    try t.expectEqual(.empty, forw.getTag(0));
+    try t.expectEqual(.byte, forw.getTag(1));
+    try t.expectEqual(.signed_byte, forw.getTag(2));
+    try t.expectEqual(.float, forw.getTag(3));
+    try t.expectEqual(.big_int, forw.getTag(4));
+    try t.expectEqual(.array, forw.getTag(5));
 }
 
 test "BackCul.setTagUnchecked" {
@@ -410,39 +410,39 @@ test "BothCul.setTagUncheckedDir" {
     both.bytes.expandToCapacity();
 
     // |0| TAG(1) |1|
-    both.setTagUncheckedDir(.foreward, 0, .empty);
-    try t.expectEqual(.empty, both.getTagDir(.foreward, 0));
+    both.setTagUncheckedDir(.forward, 0, .empty);
+    try t.expectEqual(.empty, both.getTagDir(.forward, 0));
     try t.expectEqual(.empty, both.getTagDir(.backward, 1));
 
     // |1| TAG(1) |2| BYTE(1) |3| TAG(1) |4|
-    both.setTagUncheckedDir(.foreward, 1, .byte);
-    try t.expectEqual(.byte, both.getTagDir(.foreward, 1));
+    both.setTagUncheckedDir(.forward, 1, .byte);
+    try t.expectEqual(.byte, both.getTagDir(.forward, 1));
     try t.expectEqual(.byte, both.getTagDir(.backward, 4));
 
     // |1| TAG(1) |2| FLOAT(4) |6| TAG(1) |7|
     both.setTagUncheckedDir(.backward, 7, .float);
-    try t.expectEqual(.float, both.getTagDir(.foreward, 1));
+    try t.expectEqual(.float, both.getTagDir(.forward, 1));
     try t.expectEqual(.float, both.getTagDir(.backward, 7));
 
     // |2| TAG(1) |3| ARRAY(4) |7| TAG(1) |8|
-    both.setTagUncheckedDir(.foreward, 2, .array);
-    try t.expectEqual(.array, both.getTagDir(.foreward, 2));
+    both.setTagUncheckedDir(.forward, 2, .array);
+    try t.expectEqual(.array, both.getTagDir(.forward, 2));
     try t.expectEqual(.array, both.getTagDir(.backward, 8));
 }
 
 test "ForeCul.checkSize" {
-    var fore = try ForeCul.initBytesCapacity(ta, 16);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 16);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
-    fore.setTagUnchecked(0, .empty);
-    try fore.checkSize(0, .empty);
-    try t.expectError(ForeCul.SizeError.CurrentPayloadTooSmall, fore.checkSize(0, .byte));
+    forw.setTagUnchecked(0, .empty);
+    try forw.checkSize(0, .empty);
+    try t.expectError(ForCul.SizeError.CurrentPayloadTooSmall, forw.checkSize(0, .byte));
 
-    fore.setTagUnchecked(4, .byte);
-    try fore.checkSize(4, .signed_byte);
-    try t.expectError(ForeCul.SizeError.CurrentPayloadTooBig, fore.checkSize(4, .empty));
+    forw.setTagUnchecked(4, .byte);
+    try forw.checkSize(4, .signed_byte);
+    try t.expectError(ForCul.SizeError.CurrentPayloadTooBig, forw.checkSize(4, .empty));
 }
 
 test "BackCul.checkSize" {
@@ -466,35 +466,35 @@ test "BothCul.checkSizeDir" {
 
     both.bytes.expandToCapacity();
 
-    both.setTagUncheckedDir(.foreward, 0, .empty);
+    both.setTagUncheckedDir(.forward, 0, .empty);
     try both.checkSizeDir(.backward, 1, .empty);
     try t.expectError(
         BothCul.SizeError.CurrentPayloadTooSmall,
-        both.checkSizeDir(.foreward, 0, .byte),
+        both.checkSizeDir(.forward, 0, .byte),
     );
 
     // |4| TAG(1) |5| FLOAT(4) |9| TAG(1) |10|
-    both.setTagUncheckedDir(.foreward, 4, .float);
+    both.setTagUncheckedDir(.forward, 4, .float);
     try both.checkSizeDir(.backward, 10, .array);
     try t.expectError(
         BothCul.SizeError.CurrentPayloadTooBig,
-        both.checkSizeDir(.foreward, 4, .byte),
+        both.checkSizeDir(.forward, 4, .byte),
     );
 }
 
 test "ForeCul.getPayloadUnchecked" {
-    var fore = try ForeCul.initBytesCapacity(ta, 4);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 4);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
     // |0| TAG(1) |1| BYTE(1) |2|
-    fore.bytes.items[1] = 69;
+    forw.bytes.items[1] = 69;
 
-    try t.expectEqual(69, fore.getPayloadUnchecked(.byte, 1));
+    try t.expectEqual(69, forw.getPayloadUnchecked(.byte, 1));
     try t.expectEqual(
         @as(SByte, @bitCast(@as(UByte, 69))),
-        fore.getPayloadUnchecked(.signed_byte, 1),
+        forw.getPayloadUnchecked(.signed_byte, 1),
     );
 }
 
@@ -525,22 +525,22 @@ test "BothCul.getPayloadUncheckedDir" {
     both.bytes.items[8] = 24;
     both.bytes.items[9] = 120;
 
-    try t.expectEqual([_]u8{ 2, 6, 24, 120 }, both.getPayloadUncheckedDir(.array, .foreward, 6));
+    try t.expectEqual([_]u8{ 2, 6, 24, 120 }, both.getPayloadUncheckedDir(.array, .forward, 6));
     try t.expectEqual([_]u8{ 2, 6, 24, 120 }, both.getPayloadUncheckedDir(.array, .backward, 10));
 }
 
 test "ForeCul.setPayloadUnchecked" {
-    var fore = try ForeCul.initBytesCapacity(ta, 16);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 16);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
     // |0| TAG(1) |1| FLOAT(4) |5| TAG(1) |6| SBYTE(1) |7|
-    fore.setPayloadUnchecked(.float, 1, 3.1415);
-    fore.setPayloadUnchecked(.signed_byte, 6, 69);
+    forw.setPayloadUnchecked(.float, 1, 3.1415);
+    forw.setPayloadUnchecked(.signed_byte, 6, 69);
 
-    try t.expectEqual(3.1415, fore.getPayloadUnchecked(.float, 1));
-    try t.expectEqual(69, fore.getPayloadUnchecked(.signed_byte, 6));
+    try t.expectEqual(3.1415, forw.getPayloadUnchecked(.float, 1));
+    try t.expectEqual(69, forw.getPayloadUnchecked(.signed_byte, 6));
 }
 
 test "BackCul.setPayloadUnchecked" {
@@ -564,44 +564,44 @@ test "BothCul.setPayloadUncheckedDir" {
     both.bytes.expandToCapacity();
 
     // |0| TAG(1) |1| FLOAT(4) |5| TAG(1) |6|
-    both.setPayloadUncheckedDir(.float, .foreward, 1, 1.618);
+    both.setPayloadUncheckedDir(.float, .forward, 1, 1.618);
 
-    try t.expectEqual(1.618, both.getPayloadUncheckedDir(.float, .foreward, 1));
+    try t.expectEqual(1.618, both.getPayloadUncheckedDir(.float, .forward, 1));
     try t.expectEqual(1.618, both.getPayloadUncheckedDir(.float, .backward, 5));
 
     // |0| TAG(1) |1| BYTE |2| TAG(1) |3|
     both.setPayloadUncheckedDir(.byte, .backward, 2, 69);
 
     try t.expectEqual(69, both.getPayloadUncheckedDir(.byte, .backward, 2));
-    try t.expectEqual(69, both.getPayloadUncheckedDir(.byte, .foreward, 1));
+    try t.expectEqual(69, both.getPayloadUncheckedDir(.byte, .forward, 1));
 }
 
 test "ForeCul.checkTag" {
-    var fore = try ForeCul.initBytesCapacity(ta, 8);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 8);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
-    fore.setTagUnchecked(0, .empty);
-    fore.setTagUnchecked(1, .byte);
-    fore.setTagUnchecked(2, .signed_byte);
-    fore.setTagUnchecked(3, .float);
-    fore.setTagUnchecked(4, .array);
-    fore.setTagUnchecked(5, .big_int);
+    forw.setTagUnchecked(0, .empty);
+    forw.setTagUnchecked(1, .byte);
+    forw.setTagUnchecked(2, .signed_byte);
+    forw.setTagUnchecked(3, .float);
+    forw.setTagUnchecked(4, .array);
+    forw.setTagUnchecked(5, .big_int);
 
-    try fore.checkTag(0, .empty);
-    try fore.checkTag(1, .byte);
-    try fore.checkTag(2, .signed_byte);
-    try fore.checkTag(3, .float);
-    try fore.checkTag(4, .array);
-    try fore.checkTag(5, .big_int);
+    try forw.checkTag(0, .empty);
+    try forw.checkTag(1, .byte);
+    try forw.checkTag(2, .signed_byte);
+    try forw.checkTag(3, .float);
+    try forw.checkTag(4, .array);
+    try forw.checkTag(5, .big_int);
 
-    try t.expectError(ForeCul.TagError.WrongTag, fore.checkTag(5, .empty));
-    try t.expectError(ForeCul.TagError.WrongTag, fore.checkTag(0, .byte));
-    try t.expectError(ForeCul.TagError.WrongTag, fore.checkTag(1, .signed_byte));
-    try t.expectError(ForeCul.TagError.WrongTag, fore.checkTag(2, .float));
-    try t.expectError(ForeCul.TagError.WrongTag, fore.checkTag(3, .array));
-    try t.expectError(ForeCul.TagError.WrongTag, fore.checkTag(4, .big_int));
+    try t.expectError(ForCul.TagError.WrongTag, forw.checkTag(5, .empty));
+    try t.expectError(ForCul.TagError.WrongTag, forw.checkTag(0, .byte));
+    try t.expectError(ForCul.TagError.WrongTag, forw.checkTag(1, .signed_byte));
+    try t.expectError(ForCul.TagError.WrongTag, forw.checkTag(2, .float));
+    try t.expectError(ForCul.TagError.WrongTag, forw.checkTag(3, .array));
+    try t.expectError(ForCul.TagError.WrongTag, forw.checkTag(4, .big_int));
 }
 
 test "BackCul.checkTag" {
@@ -624,12 +624,12 @@ test "BackCul.checkTag" {
     try back.checkTag(4, .array);
     try back.checkTag(5, .big_int);
 
-    try t.expectError(ForeCul.TagError.WrongTag, back.checkTag(5, .empty));
-    try t.expectError(ForeCul.TagError.WrongTag, back.checkTag(6, .byte));
-    try t.expectError(ForeCul.TagError.WrongTag, back.checkTag(1, .signed_byte));
-    try t.expectError(ForeCul.TagError.WrongTag, back.checkTag(2, .float));
-    try t.expectError(ForeCul.TagError.WrongTag, back.checkTag(3, .array));
-    try t.expectError(ForeCul.TagError.WrongTag, back.checkTag(4, .big_int));
+    try t.expectError(ForCul.TagError.WrongTag, back.checkTag(5, .empty));
+    try t.expectError(ForCul.TagError.WrongTag, back.checkTag(6, .byte));
+    try t.expectError(ForCul.TagError.WrongTag, back.checkTag(1, .signed_byte));
+    try t.expectError(ForCul.TagError.WrongTag, back.checkTag(2, .float));
+    try t.expectError(ForCul.TagError.WrongTag, back.checkTag(3, .array));
+    try t.expectError(ForCul.TagError.WrongTag, back.checkTag(4, .big_int));
 }
 
 test "BothCul.checkTagDir" {
@@ -639,40 +639,40 @@ test "BothCul.checkTagDir" {
     both.bytes.expandToCapacity();
 
     // |0| TAG(1) |1|
-    both.setTagUncheckedDir(.foreward, 0, .empty);
-    try both.checkTagDir(.foreward, 0, .empty);
+    both.setTagUncheckedDir(.forward, 0, .empty);
+    try both.checkTagDir(.forward, 0, .empty);
     try both.checkTagDir(.backward, 1, .empty);
 
     both.setTagUncheckedDir(.backward, 1, .empty);
-    try both.checkTagDir(.foreward, 0, .empty);
+    try both.checkTagDir(.forward, 0, .empty);
     try both.checkTagDir(.backward, 1, .empty);
 
     // |0| TAG(1) |1| BYTE(1) |2| TAG(1) |3|
-    both.setTagUncheckedDir(.foreward, 0, .byte);
-    try both.checkTagDir(.foreward, 0, .byte);
+    both.setTagUncheckedDir(.forward, 0, .byte);
+    try both.checkTagDir(.forward, 0, .byte);
     try both.checkTagDir(.backward, 3, .byte);
 
     // |0| TAG(1) |1| FLOAT(4) |5| TAG(1) |6|
     both.setTagUncheckedDir(.backward, 6, .float);
-    try both.checkTagDir(.foreward, 0, .float);
+    try both.checkTagDir(.forward, 0, .float);
     try both.checkTagDir(.backward, 6, .float);
 }
 
 test "ForeCul.setVariantUnchecked" {
-    var fore = try ForeCul.initBytesCapacity(ta, 32);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 32);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
     // |0| TAG(1) |1| BYTE(1) |2|
-    fore.setVariantUnchecked(0, .byte, 69);
-    try t.expectEqual(69, fore.getPayloadUnchecked(.byte, ForeCul.payloadIndex(0)));
-    try t.expectEqual(.byte, fore.getTag(0));
+    forw.setVariantUnchecked(0, .byte, 69);
+    try t.expectEqual(69, forw.getPayloadUnchecked(.byte, ForCul.payloadIndex(0)));
+    try t.expectEqual(.byte, forw.getTag(0));
 
     // |2| TAG(1) |3| FLOAT(4) |7|
-    fore.setVariantUnchecked(2, .float, 3.1415);
-    try t.expectEqual(3.1415, fore.getPayloadUnchecked(.float, ForeCul.payloadIndex(2)));
-    try t.expectEqual(.float, fore.getTag(2));
+    forw.setVariantUnchecked(2, .float, 3.1415);
+    try t.expectEqual(3.1415, forw.getPayloadUnchecked(.float, ForCul.payloadIndex(2)));
+    try t.expectEqual(.float, forw.getTag(2));
 }
 
 test "BackCul.setVariantUnchecked" {
@@ -701,13 +701,13 @@ test "BothCul.setVariantUncheckedDir" {
     both.bytes.expandToCapacity();
 
     // |4| TAG(1) |5| ARRAY(4) |9| TAG(1) |10|
-    both.setVariantUncheckedDir(.foreward, 4, .array, .{ 1, 8, 27, 64 });
-    try t.expectEqual(.array, both.getTagDir(.foreward, 4));
+    both.setVariantUncheckedDir(.forward, 4, .array, .{ 1, 8, 27, 64 });
+    try t.expectEqual(.array, both.getTagDir(.forward, 4));
     try t.expectEqual(.array, both.getTagDir(.backward, 10));
     try t.expectEqual(.{ 1, 8, 27, 64 }, both.getPayloadUncheckedDir(
         .array,
-        .foreward,
-        BothCul.payloadIndexDir(.foreward, 4),
+        .forward,
+        BothCul.payloadIndexDir(.forward, 4),
     ));
     try t.expectEqual(.{ 1, 8, 27, 64 }, both.getPayloadUncheckedDir(
         .array,
@@ -717,12 +717,12 @@ test "BothCul.setVariantUncheckedDir" {
 
     // |3| TAG(1) |4| BYTE(1) |5| TAG(1) |6|
     both.setVariantUncheckedDir(.backward, 6, .byte, 69);
-    try t.expectEqual(.byte, both.getTagDir(.foreward, 3));
+    try t.expectEqual(.byte, both.getTagDir(.forward, 3));
     try t.expectEqual(.byte, both.getTagDir(.backward, 6));
     try t.expectEqual(69, both.getPayloadUncheckedDir(
         .byte,
-        .foreward,
-        BothCul.payloadIndexDir(.foreward, 3),
+        .forward,
+        BothCul.payloadIndexDir(.forward, 3),
     ));
     try t.expectEqual(69, both.getPayloadUncheckedDir(
         .byte,
@@ -732,17 +732,17 @@ test "BothCul.setVariantUncheckedDir" {
 }
 
 test "ForeCul.get" {
-    var fore = try ForeCul.initBytesCapacity(ta, 10);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 10);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
     // |0| TAG(1) |1| ARRAY(4) |5| TAG(1) |6| FLOAT(4) |10|
-    fore.setVariantUnchecked(0, .array, .{ 0, 1, 16, 81 });
-    fore.setVariantUnchecked(5, .float, 1.61);
+    forw.setVariantUnchecked(0, .array, .{ 0, 1, 16, 81 });
+    forw.setVariantUnchecked(5, .float, 1.61);
 
-    try t.expectEqual(Union{ .array = .{ 0, 1, 16, 81 } }, fore.get(0));
-    try t.expectEqual(Union{ .float = 1.61 }, fore.get(5));
+    try t.expectEqual(Union{ .array = .{ 0, 1, 16, 81 } }, forw.get(0));
+    try t.expectEqual(Union{ .float = 1.61 }, forw.get(5));
 }
 test "BackCul.get" {
     var back = try BackCul.initBytesCapacity(ta, 7);
@@ -764,28 +764,28 @@ test "BothCul.getDir" {
     both.bytes.expandToCapacity();
 
     // |0| TAG(1) |1| FLOAT(4) |5| TAG(1) |6| TAG(1) |7| ARRAY(4) |11| TAG(1) |12|
-    both.setVariantUncheckedDir(.foreward, 0, .float, 3.1415);
+    both.setVariantUncheckedDir(.forward, 0, .float, 3.1415);
     both.setVariantUncheckedDir(.backward, 12, .array, .{ 15, 46, 23, 70 });
 
-    try t.expectEqual(Union{ .float = 3.1415 }, both.getDir(.foreward, 0));
+    try t.expectEqual(Union{ .float = 3.1415 }, both.getDir(.forward, 0));
     try t.expectEqual(Union{ .float = 3.1415 }, both.getDir(.backward, 6));
 
-    try t.expectEqual(Union{ .array = .{ 15, 46, 23, 70 } }, both.getDir(.foreward, 6));
+    try t.expectEqual(Union{ .array = .{ 15, 46, 23, 70 } }, both.getDir(.forward, 6));
     try t.expectEqual(Union{ .array = .{ 15, 46, 23, 70 } }, both.getDir(.backward, 12));
 }
 
 test "ForeCul.setUnchecked" {
-    var fore = try ForeCul.initBytesCapacity(ta, 10);
-    defer fore.deinit(ta);
+    var forw = try ForCul.initBytesCapacity(ta, 10);
+    defer forw.deinit(ta);
 
-    fore.bytes.expandToCapacity();
+    forw.bytes.expandToCapacity();
 
     // |0| TAG(1) |1| ARRAY(4) |5| TAG(1) |6| FLOAT(4) |10|
-    fore.setUnchecked(0, Union{ .array = .{ 0, 1, 16, 81 } });
-    fore.setUnchecked(5, Union{ .float = 1.61 });
+    forw.setUnchecked(0, Union{ .array = .{ 0, 1, 16, 81 } });
+    forw.setUnchecked(5, Union{ .float = 1.61 });
 
-    try t.expectEqual(Union{ .array = .{ 0, 1, 16, 81 } }, fore.get(0));
-    try t.expectEqual(Union{ .float = 1.61 }, fore.get(5));
+    try t.expectEqual(Union{ .array = .{ 0, 1, 16, 81 } }, forw.get(0));
+    try t.expectEqual(Union{ .float = 1.61 }, forw.get(5));
 }
 test "BackCul.setUnchecked" {
     var back = try BackCul.initBytesCapacity(ta, 7);
@@ -807,32 +807,32 @@ test "BothCul.setUncheckedDir" {
     both.bytes.expandToCapacity();
 
     // |0| TAG(1) |1| FLOAT(4) |5| TAG(1) |6| TAG(1) |7| ARRAY(4) |11| TAG(1) |12|
-    both.setUncheckedDir(.foreward, 0, Union{ .float = 3.1415 });
+    both.setUncheckedDir(.forward, 0, Union{ .float = 3.1415 });
     both.setUncheckedDir(.backward, 12, Union{ .array = .{ 15, 46, 23, 70 } });
 
-    try t.expectEqual(Union{ .float = 3.1415 }, both.getDir(.foreward, 0));
+    try t.expectEqual(Union{ .float = 3.1415 }, both.getDir(.forward, 0));
     try t.expectEqual(Union{ .float = 3.1415 }, both.getDir(.backward, 6));
 
-    try t.expectEqual(Union{ .array = .{ 15, 46, 23, 70 } }, both.getDir(.foreward, 6));
+    try t.expectEqual(Union{ .array = .{ 15, 46, 23, 70 } }, both.getDir(.forward, 6));
     try t.expectEqual(Union{ .array = .{ 15, 46, 23, 70 } }, both.getDir(.backward, 12));
 }
 
 test "ForeCul.append" {
-    var fore = ForeCul{};
-    defer fore.deinit(ta);
+    var forw = ForCul{};
+    defer forw.deinit(ta);
 
-    const first_index = fore.bytes.items.len;
-    try fore.append(ta, .empty);
+    const first_index = forw.bytes.items.len;
+    try forw.append(ta, .empty);
 
-    const second_index = fore.bytes.items.len;
-    try fore.append(ta, .{ .byte = 69 });
+    const second_index = forw.bytes.items.len;
+    try forw.append(ta, .{ .byte = 69 });
 
-    const third_index = fore.bytes.items.len;
-    try fore.append(ta, .{ .float = 3.1415 });
+    const third_index = forw.bytes.items.len;
+    try forw.append(ta, .{ .float = 3.1415 });
 
-    try t.expectEqual(Union.empty, fore.get(first_index));
-    try t.expectEqual(Union{ .byte = 69 }, fore.get(second_index));
-    try t.expectEqual(Union{ .float = 3.1415 }, fore.get(third_index));
+    try t.expectEqual(Union.empty, forw.get(first_index));
+    try t.expectEqual(Union{ .byte = 69 }, forw.get(second_index));
+    try t.expectEqual(Union{ .float = 3.1415 }, forw.get(third_index));
 }
 test "BackCul.append" {
     var back = BackCul{};
@@ -855,21 +855,21 @@ test "BothCul.append" {
     var both = BothCul{};
     defer both.deinit(ta);
 
-    const first_fore_index = both.bytes.items.len;
+    const first_forw_index = both.bytes.items.len;
     try both.append(ta, .empty);
     const first_back_index = both.bytes.items.len;
 
-    const second_fore_index = both.bytes.items.len;
+    const second_forw_index = both.bytes.items.len;
     try both.append(ta, .{ .byte = 69 });
     const second_back_index = both.bytes.items.len;
 
-    const third_fore_index = both.bytes.items.len;
+    const third_forw_index = both.bytes.items.len;
     try both.append(ta, .{ .float = 3.1415 });
     const third_back_index = both.bytes.items.len;
 
-    try t.expectEqual(Union.empty, both.getDir(.foreward, first_fore_index));
-    try t.expectEqual(Union{ .byte = 69 }, both.getDir(.foreward, second_fore_index));
-    try t.expectEqual(Union{ .float = 3.1415 }, both.getDir(.foreward, third_fore_index));
+    try t.expectEqual(Union.empty, both.getDir(.forward, first_forw_index));
+    try t.expectEqual(Union{ .byte = 69 }, both.getDir(.forward, second_forw_index));
+    try t.expectEqual(Union{ .float = 3.1415 }, both.getDir(.forward, third_forw_index));
 
     try t.expectEqual(Union.empty, both.getDir(.backward, first_back_index));
     try t.expectEqual(Union{ .byte = 69 }, both.getDir(.backward, second_back_index));
@@ -877,16 +877,16 @@ test "BothCul.append" {
 }
 
 test "ForeCul.iterate" {
-    var fore = ForeCul{};
-    defer fore.deinit(ta);
+    var forw = ForCul{};
+    defer forw.deinit(ta);
 
-    try fore.append(ta, .empty);
-    try fore.append(ta, .{ .byte = 69 });
-    try fore.append(ta, .{ .signed_byte = -1 });
-    try fore.append(ta, .{ .float = 3.1415 });
-    try fore.append(ta, .{ .array = .{ 1, 2, 4, 8 } });
+    try forw.append(ta, .empty);
+    try forw.append(ta, .{ .byte = 69 });
+    try forw.append(ta, .{ .signed_byte = -1 });
+    try forw.append(ta, .{ .float = 3.1415 });
+    try forw.append(ta, .{ .array = .{ 1, 2, 4, 8 } });
 
-    var iter = fore.iterate();
+    var iter = forw.iterate();
 
     try t.expectEqual(Union.empty, iter.next());
     try t.expectEqual(Union{ .byte = 69 }, iter.next());
@@ -926,7 +926,7 @@ test "BothCul.iterate" {
     try both.append(ta, .{ .float = 3.1415 });
     try both.append(ta, .{ .array = .{ 1, 2, 4, 8 } });
 
-    var iter = both.iterateDir(.foreward);
+    var iter = both.iterateDir(.forward);
 
     try t.expectEqual(Union.empty, iter.next());
     try t.expectEqual(Union{ .byte = 69 }, iter.next());
@@ -946,22 +946,22 @@ test "BothCul.iterate" {
 }
 
 test "ForeCul.resolveIndex" {
-    var fore = ForeCul{};
-    defer fore.deinit(ta);
+    var forw = ForCul{};
+    defer forw.deinit(ta);
 
-    try t.expectEqual(null, fore.resolveIndex(0));
+    try t.expectEqual(null, forw.resolveIndex(0));
 
-    try fore.append(ta, .empty);
-    try t.expectEqual(0, fore.resolveIndex(0));
+    try forw.append(ta, .empty);
+    try t.expectEqual(0, forw.resolveIndex(0));
 
-    try fore.append(ta, .{ .big_int = 1000_000_000_000_000_000_000 });
-    try t.expectEqual(1, fore.resolveIndex(1));
+    try forw.append(ta, .{ .big_int = 1000_000_000_000_000_000_000 });
+    try t.expectEqual(1, forw.resolveIndex(1));
 
-    try fore.append(ta, .{ .float = 24.60 });
-    try t.expectEqual(34, fore.resolveIndex(2));
-    try t.expectEqual(Union{ .float = 24.60 }, fore.get(34));
+    try forw.append(ta, .{ .float = 24.60 });
+    try t.expectEqual(34, forw.resolveIndex(2));
+    try t.expectEqual(Union{ .float = 24.60 }, forw.get(34));
 
-    try t.expectEqual(null, fore.resolveIndex(3));
+    try t.expectEqual(null, forw.resolveIndex(3));
 }
 
 test "BackCul.resolveIndex" {
@@ -987,45 +987,45 @@ test "BothCul.resolveIndex" {
     var both = BothCul{};
     defer both.deinit(ta);
 
-    try t.expectEqual(null, both.resolveIndexDir(.foreward, 0));
+    try t.expectEqual(null, both.resolveIndexDir(.forward, 0));
     try t.expectEqual(null, both.resolveIndexDir(.backward, 0));
 
     try both.append(ta, .empty);
-    try t.expectEqual(0, both.resolveIndexDir(.foreward, 0));
+    try t.expectEqual(0, both.resolveIndexDir(.forward, 0));
     try t.expectEqual(1, both.resolveIndexDir(.backward, 0));
 
     try both.append(ta, .{ .big_int = 31415 });
-    try t.expectEqual(1, both.resolveIndexDir(.foreward, 1));
-    try t.expectEqual(Union{ .big_int = 31415 }, both.getDir(.foreward, 1));
+    try t.expectEqual(1, both.resolveIndexDir(.forward, 1));
+    try t.expectEqual(Union{ .big_int = 31415 }, both.getDir(.forward, 1));
     try t.expectEqual(35, both.resolveIndexDir(.backward, 0));
     try t.expectEqual(Union{ .big_int = 31415 }, both.getDir(.backward, 35));
 }
 
 test "ForeCul.insertVariant" {
-    var fore = ForeCul{};
-    defer fore.deinit(ta);
+    var forw = ForCul{};
+    defer forw.deinit(ta);
 
-    try fore.insertVariant(ta, 0, .empty, {});
-    try t.expectEqual(Union.empty, fore.get(0));
+    try forw.insertVariant(ta, 0, .empty, {});
+    try t.expectEqual(Union.empty, forw.get(0));
 
-    try fore.insertVariant(ta, 1, .byte, 69);
-    var iter = fore.iterate();
+    try forw.insertVariant(ta, 1, .byte, 69);
+    var iter = forw.iterate();
 
     try t.expectEqual(Union.empty, iter.next());
     try t.expectEqual(Union{ .byte = 69 }, iter.next());
     try t.expectEqual(null, iter.next());
 
-    try fore.insertVariant(ta, iter.idx, .array, .{ 0, 1, 32, 243 });
-    iter = .init(&fore);
+    try forw.insertVariant(ta, iter.idx, .array, .{ 0, 1, 32, 243 });
+    iter = .init(&forw);
 
     try t.expectEqual(Union.empty, iter.next());
     try t.expectEqual(Union{ .byte = 69 }, iter.next());
     try t.expectEqual(Union{ .array = .{ 0, 1, 32, 243 } }, iter.next());
     try t.expectEqual(null, iter.next());
 
-    const idx = fore.resolveIndex(2) orelse return error.UnexpectedNull;
-    try fore.insertVariant(ta, idx, .float, 3.1415);
-    iter = .init(&fore);
+    const idx = forw.resolveIndex(2) orelse return error.UnexpectedNull;
+    try forw.insertVariant(ta, idx, .float, 3.1415);
+    iter = .init(&forw);
 
     try t.expectEqual(Union.empty, iter.next());
     try t.expectEqual(Union{ .byte = 69 }, iter.next());
@@ -1033,8 +1033,8 @@ test "ForeCul.insertVariant" {
     try t.expectEqual(Union{ .array = .{ 0, 1, 32, 243 } }, iter.next());
     try t.expectEqual(null, iter.next());
 
-    try fore.insertVariant(ta, 0, .big_int, 35148_3773);
-    iter = .init(&fore);
+    try forw.insertVariant(ta, 0, .big_int, 35148_3773);
+    iter = .init(&forw);
 
     try t.expectEqual(Union{ .big_int = 35148_3773 }, iter.next());
     try t.expectEqual(Union.empty, iter.next());
@@ -1080,15 +1080,15 @@ test "BothCul.insertVariant" {
     var both = BothCul{};
     defer both.deinit(ta);
 
-    try both.insertVariantDir(ta, .foreward, 0, .empty, {});
-    try t.expectEqual(Union.empty, both.getDir(.foreward, 0));
+    try both.insertVariantDir(ta, .forward, 0, .empty, {});
+    try t.expectEqual(Union.empty, both.getDir(.forward, 0));
 
     try both.insertVariantDir(ta, .backward, 6, .float, 1.618);
-    try t.expectEqual(Union{ .float = 1.618 }, both.getDir(.foreward, 0));
+    try t.expectEqual(Union{ .float = 1.618 }, both.getDir(.forward, 0));
 
     try both.insertVariantDir(ta, .backward, both.bytes.items.len + 3, .byte, 69);
 
-    var iter = both.iterateDir(.foreward);
+    var iter = both.iterateDir(.forward);
 
     try t.expectEqual(Union{ .float = 1.618 }, iter.next());
     try t.expectEqual(Union.empty, iter.next());
@@ -1097,42 +1097,42 @@ test "BothCul.insertVariant" {
 }
 
 test "ForeCul.remove" {
-    var fore = ForeCul{};
-    defer fore.deinit(ta);
+    var forw = ForCul{};
+    defer forw.deinit(ta);
 
-    try fore.append(ta, .empty);
-    fore.remove(0);
+    try forw.append(ta, .empty);
+    forw.remove(0);
 
-    var iter = fore.iterate();
+    var iter = forw.iterate();
     try t.expectEqual(null, iter.next());
 
-    try fore.append(ta, .{ .byte = 69 });
-    try fore.append(ta, .{ .float = 1.618 });
-    try fore.append(ta, .{ .signed_byte = 42 });
+    try forw.append(ta, .{ .byte = 69 });
+    try forw.append(ta, .{ .float = 1.618 });
+    try forw.append(ta, .{ .signed_byte = 42 });
 
-    iter = fore.iterate();
+    iter = forw.iterate();
     try t.expectEqual(Union{ .byte = 69 }, iter.next());
     try t.expectEqual(Union{ .float = 1.618 }, iter.next());
     try t.expectEqual(Union{ .signed_byte = 42 }, iter.next());
     try t.expectEqual(null, iter.next());
 
-    var index = fore.resolveIndex(1) orelse return error.UnexpectedNull;
-    fore.remove(index);
+    var index = forw.resolveIndex(1) orelse return error.UnexpectedNull;
+    forw.remove(index);
 
-    iter = fore.iterate();
+    iter = forw.iterate();
     try t.expectEqual(Union{ .byte = 69 }, iter.next());
     try t.expectEqual(Union{ .signed_byte = 42 }, iter.next());
     try t.expectEqual(null, iter.next());
 
-    index = fore.resolveIndex(1) orelse return error.UnexpectedNull;
-    fore.remove(index);
+    index = forw.resolveIndex(1) orelse return error.UnexpectedNull;
+    forw.remove(index);
 
-    iter = fore.iterate();
+    iter = forw.iterate();
     try t.expectEqual(Union{ .byte = 69 }, iter.next());
     try t.expectEqual(null, iter.next());
 
-    fore.remove(0);
-    iter = fore.iterate();
+    forw.remove(0);
+    iter = forw.iterate();
     try t.expectEqual(null, iter.next());
 }
 
@@ -1189,15 +1189,15 @@ test "BothCul.remove" {
     try both.append(ta, Union{ .array = .{ 23, 29, 31, 37 } });
     try both.append(ta, Union.empty);
 
-    var fore_iter = both.iterateDir(.foreward);
+    var forw_iter = both.iterateDir(.forward);
 
-    try t.expectEqual(Union{ .float = 3.1415 }, fore_iter.next());
-    try t.expectEqual(Union{ .byte = 69 }, fore_iter.next());
-    try t.expectEqual(Union{ .array = .{ 23, 29, 31, 37 } }, fore_iter.next());
-    try t.expectEqual(Union.empty, fore_iter.next());
-    try t.expectEqual(null, fore_iter.next());
+    try t.expectEqual(Union{ .float = 3.1415 }, forw_iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, forw_iter.next());
+    try t.expectEqual(Union{ .array = .{ 23, 29, 31, 37 } }, forw_iter.next());
+    try t.expectEqual(Union.empty, forw_iter.next());
+    try t.expectEqual(null, forw_iter.next());
 
-    var back_iter = fore_iter.reverse();
+    var back_iter = forw_iter.reverse();
 
     try t.expectEqual(Union.empty, back_iter.next());
     try t.expectEqual(Union{ .array = .{ 23, 29, 31, 37 } }, back_iter.next());
@@ -1205,14 +1205,14 @@ test "BothCul.remove" {
     try t.expectEqual(Union{ .float = 3.1415 }, back_iter.next());
     try t.expectEqual(null, back_iter.next());
 
-    var index = both.resolveIndexDir(.foreward, 1) orelse return error.UnexpectedNull;
-    both.removeDir(.foreward, index);
-    fore_iter = .init(&both);
+    var index = both.resolveIndexDir(.forward, 1) orelse return error.UnexpectedNull;
+    both.removeDir(.forward, index);
+    forw_iter = .init(&both);
 
-    try t.expectEqual(Union{ .float = 3.1415 }, fore_iter.next());
-    try t.expectEqual(Union{ .array = .{ 23, 29, 31, 37 } }, fore_iter.next());
-    try t.expectEqual(Union.empty, fore_iter.next());
-    try t.expectEqual(null, fore_iter.next());
+    try t.expectEqual(Union{ .float = 3.1415 }, forw_iter.next());
+    try t.expectEqual(Union{ .array = .{ 23, 29, 31, 37 } }, forw_iter.next());
+    try t.expectEqual(Union.empty, forw_iter.next());
+    try t.expectEqual(null, forw_iter.next());
 
     index = both.resolveIndexDir(.backward, 0) orelse return error.UnexpectedNull;
     both.removeDir(.backward, index);
