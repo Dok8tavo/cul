@@ -1,83 +1,72 @@
 # ⚡ Cul
 
-The `CompactUnionList`, or `cul` (which is French for "ass" btw) data structure is a blazingly small collection of unions that gives up useless operations (like any kind of random access) in order to optimize its size.
+The `CompactUnionList`, or `cul` (which is French for "ass," by the way), is a blazingly small collection of unions that sacrifices useless operations (like any kind of random access) to optimize its size.
 
-## 🍰 Why not an slice?
+## 🍰 Why not a slice?
 
-The use-case of a `cul` is niche. It's useful when you have a big list of unions, that you don't access them often and/or preferably do so in the same (fifo) or opposite (filo) order they were declared in. In this kind of case, even though the access to the items of the list is a little more costly than that of a slice, storing them will require a lot less space, especially when there's a big size difference between the smallest and biggest variant. This memory efficiency could save you from some cache misses and result in a better execution speed in addition to the lower memory consumption.
+The use case for a `cul` is niche. It's useful when you have a large list of unions that you don't access often and/or preferably in the same (FIFO) or opposite (FILO) order in which they were declared. In such cases, even though accessing items in the list is slightly more costly than with a slice, storing them requires significantly less space—especially when there's a large size difference between the smallest and largest variant. This memory efficiency can reduce cache misses and improve execution speed in addition to lowering memory consumption.
 
-It's very likely that it won't happen and you'll be better off using a `std.MultiArrayList` or even a dumb `std.ArrayList`. Do the benchmark.
+However, in most cases, this advantage won't be significant, and you'll be better off using a `std.MultiArrayList` or even a simple `std.ArrayList`. Always benchmark before deciding.
 
 ## ⚙️ How does it work?
 
-There are three similar heap-allocated data-structure that you could use for storing your unions:
+There are three similar heap-allocated data structures you could use to store your unions:
 
-1. `std.MuliArrayList`, the best in most cases,
-2. `std.ArrayListUnmanaged`, the simplest,
-3. `CompactUnionList`, the most complicated, less flexible and less efficient most of the time.
+1. `std.MultiArrayList` – the best in most cases.
+2. `std.ArrayListUnmanaged` – the simplest.
+3. `CompactUnionList` – the most complicated, less flexible, and usually less efficient.
 
-Let's compare their storing strategy:
+Let's compare their storage strategies:
 
 ### `std.ArrayListUnmanaged`
 
-The array list will contiguously store the union themselves. A union is made up of a tag and a payload that must be able to contain the greatest variant type of the union type.
+An array list stores the unions contiguously. A union consists of a tag and a payload, which must be large enough to contain the biggest variant type of the union.
 
-First, there's the tag type. It's usually just a byte because there's rarely a need for more than 256 variants. After the tag type, there's padding, because the payload must have the alignment of the variant type with the biggest alignment. Then there's the payload. If the variant isn't the of the biggest variant type, there's unused bytes because it must be able to store the biggest variant. Then there's padding bytes because the next union instance must start with the same alignment.
+- The tag type is usually just a byte, as more than 256 variants are rarely needed.
+- After the tag, there's padding because the payload must be aligned with the variant type that has the strictest alignment requirements.
+- The payload follows, but if it isn't the largest variant, there are unused bytes to ensure it can store the largest variant.
+- Additional padding is added to maintain proper alignment for the next union instance.
 
-- tag,
-- tag-to-payload padding ,
-- payload,
-- unused,
-- payload-to-union padding.
-
-This method stores a lot of useless bytes.
+This method stores a lot of unnecessary bytes.
 
 ### `std.MultiArrayList`
 
-The multi array list will store the tags and the payloads in separate lists.
+A multi-array list stores tags and payloads in separate lists.
 
-The tag list will usually have no padding, since it rarely goes over a byte, and even if it does, two bytes is still a power of two and doesn't require additional padding.
+- The tag list usually has no padding, as it rarely exceeds a byte. Even if it does, two bytes is still a power of two and won't require extra padding.
+- The payload list still needs unused bytes to accommodate the largest payload, but padding is reduced since it only applies to payloads rather than entire unions.
 
-- tag,
-- tag-to-tag padding,
-
-The payload still need the same unused bytes to be able to store the biggest payload. But the padding is can be smaller since it only need to go to another payload and not the entire union.
-
-- payload,
-- unused,
-- payload-to-payload padding,
-
-This result in a more efficient padding, even though there's still the same amount of unused bytes from the payload size difference. The `std.MultiArrayList` support the same operations as the `std.ArrayListUnmanaged`, except for subslicing, with a negligible amount of overhead when accessing its elements.
+This results in more efficient padding, though the same amount of unused bytes persists due to payload size differences. `std.MultiArrayList` supports the same operations as `std.ArrayListUnmanaged` (except for subslicing) with a negligible access overhead.
 
 ### `CompactUnionList`
 
-The cul won't store anything else than the tag and the payload. No padding or unused bytes. If the cul is foreward, it stores the tag first, if it's backward it stores the payload first. If it's bothward, it'll store the tag twice: once before and once after the payload. This might seem inefficient, but it'll still be better than even the multi array list as long as the size difference between the biggest and smallest variant is bigger than the tag (which is often just one byte).
+The `cul` stores only the tag and the payload—no padding or unused bytes. If the `cul` is forward, it stores the tag first; if backward, it stores the payload first. If it's bothward, it stores the tag twice—once before and once after the payload. While this might seem inefficient, it still outperforms even the multi-array list as long as the size difference between the largest and smallest variant exceeds the tag size (often just one byte).
 
-The problem is that most of the payloads, and sometimes the even the tags, aren't properly aligned so accessing an item will be less efficient even than with a muli array list. But this is orders of magnitude more efficient than a cache miss still.
+The main downside is that payloads (and sometimes even tags) may not be properly aligned, making access less efficient than in a multi-array list. However, this inefficiency is still orders of magnitude better than a cache miss.
 
-The real problem is that the location of an item can't be deduced anymore from its index alone, since all items are stored using a varying amount of bytes. You can more-or-less efficiently iterate over them though. Since you can easily find the next tag, and therefore its size. If the tag is stored first, you can iterate forewards (first-in-first-out), if the tag is stored last you can iterate backwards (first-in-last-out), if there's a tag both before and after each payload, you can iterate bothwards.
+A bigger issue is that item locations can't be deduced from their indices alone, as items take up varying amounts of space. However, iteration is still feasible since each tag provides size information. If the tag is stored first, you can iterate forward (FIFO). If stored last, you can iterate backward (FILO). If stored both before and after, you can iterate bothwards.
 
 ### Comparison
 
-|                    | `CompactUnionList`        | `std.MultiArrayList`              | `std.ArrayList`            |
+|                    | `CompactUnionList`        | `std.MultiArrayList`              | `std.ArrayListUnmanaged`    |
 | ------------------ | ------------------------- | --------------------------------- | -------------------------- |
 | Storage            | byte-by-byte              | tag and payload in separate lists | in a contiguous list       |
-| Unused bytes       | 🟢 none: `O(1)`           | 🔴 yes: `O(nD)`                 | 🔴 yes: `O(nD)`              |
-| Padding            | 🟢 none: `O(1)`           | 🟠 decent `O(n(p+t))`           | 🔴 terrible `O(n(v+t))`      |
-| Memory Consumption | 🟢 most efficient: `O(n)` | 🟠 decent `O(n(p+t+u))`         | 🔴 terrible `O(n(v+t+u))`    |
-| Random Access      | 🔴 terrible: `O(nc)`      | 🟢 efficient `O(1)`             | 🟢 most efficient `O(1)`     |
-| Iteration          | 🟠 decent: `O(c)`         | 🟢 efficient `O(1)`             | 🟢 most efficient `O(1)`     |
+| Unused bytes       | 🟢 none: `O(1)`           | 🔴 yes: `O(nD)`                   | 🔴 yes: `O(nD)`            |
+| Padding            | 🟢 none: `O(1)`           | 🟠 decent `O(n(p+t))`             | 🔴 terrible `O(n(v+t))`    |
+| Memory Consumption | 🟢 most efficient: `O(n)` | 🟠 decent `O(n(p+t+u))`           | 🔴 terrible `O(n(v+t+u))`  |
+| Random Access      | 🔴 terrible: `O(nc)`      | 🟢 efficient `O(1)`               | 🟢 most efficient `O(1)`   |
+| Iteration          | 🟠 decent: `O(c)`         | 🟢 efficient `O(1)`               | 🟢 most efficient `O(1)`   |
 
-- n: number of items,
-- u: difference between greatest and smallest variant,
-- v: variant padding,
-- t: tag padding,
-- p: payload padding,
-- c: compression/decompression complexity
+- `n`: number of items
+- `u`: difference between greatest and smallest variant
+- `v`: variant padding
+- `t`: tag padding
+- `p`: payload padding
+- `c`: compression/decompression complexity
 
 ### Example
 
-Let's consider a union type and a list of all variants.
+Let's consider a union type and a list of all variants:
 
 ```zig
 const Union = union(enum) {
@@ -91,72 +80,32 @@ const Union = union(enum) {
 
 #### `std.ArrayListUnmanaged`
 
-A the largest payload is that of the `long` variant (64 bits/8 bytes), and there's an 8 bit/1 byte tag. So each union should be 128 bits/16 bytes. Let's see what `.{ .empty, .byte, .word, .int, .long }` looks like in memory.
+The largest payload is `long` (64 bits/8 bytes), and the tag is 8 bits/1 byte. Each union takes 128 bits/16 bytes.
 
-```
-|0x00| TAG(1):empty |0x01| PADDING(7) |0x08| EMPTY(0) |0x08| UNUSED(8) |0x10|
-|0x10| TAG(1):byte  |0x11| PADDING(7) |0x18| BYTE(1)  |0x19| UNUSED(7) |0x20|
-|0x20| TAG(1):word  |0x21| PADDING(7) |0x28| WORD(2)  |0x2A| UNUSED(6) |0x30|
-|0x30| TAG(1):int   |0x31| PADDING(7) |0x38| INT(4)   |0x3C| UNUSED(4) |0x40|
-|0x40| TAG(1):long  |0x41| PADDING(7) |0x48| LONG(8)  |0x50| UNUSED(0) |0x50|
-```
-
-Here, we can clearly see what's happening with the padding of the tag. That's what `std.MultiArrayList` takes care of.
-
-We used 640 bits/80 bytes.
+Used memory: **80 bytes**
 
 #### `std.MultiArrayList`
 
-```
-|0| TAG(1):empty |1|
-|1| TAG(1):byte  |2|
-|2| TAG(1):word  |3|
-|3| TAG(1):int   |4|
-|4| TAG(1):long  |5|
+- Tags take **5 bytes** (no padding required).
+- Payloads take **40 bytes** (no padding but with unused bytes).
 
-|0x00| EMPTY(0) |0x00| UNUSED(8) |0x08|
-|0x08| BYTE(1)  |0x09| UNUSED(7) |0x10|
-|0x10| WORD(2)  |0x12| UNUSED(6) |0x18|
-|0x18| INT(4)   |0x1B| UNUSED(4) |0x20|
-|0x20| LONG(8)  |0x28| UNUSED(0) |0x28|
-```
-
-Here, we used 40 bits/5 bytes for the tags (no padding required), and 320 bits/40 bytes for the payloads (no padding either but unused bytes).
-
-We used 360 bits/45 bytes which is already a great improvement. But there's still unused bytes (and we're lucky there's no additional padding for the payload (that could happen too with the tag (but I doubt you've encountered this case))).
+Used memory: **45 bytes** (significant improvement)
 
 #### `CompactUnionList`
 
-```
-|0x00| TAG(1):empty |0x01| EMPTY(0) |0x01|
-|0x01| TAG(1):byte  |0x02| BYTE(1)  |0x03|
-|0x03| TAG(1):word  |0x04| WORD(2)  |0x06|
-|0x06| TAG(1):int   |0x07| INT(4)   |0x0B|
-|0x0B| TAG(1):long  |0x0C| LONG(8)  |0x24|
-```
+- Eliminates unused bytes and minimizes padding.
 
-Here we used 192 bits/24 bytes.
+Used memory: **24 bytes**
 
 ## 📃 License
 
 MIT License
 
-Copyright (c) 2025 Dok8tavo
+(c) 2025 Dok8tavo
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
