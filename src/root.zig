@@ -165,6 +165,27 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
 
         pub const Iterator = IteratorDir(iter.direction());
 
+        pub fn VariantResizeVariantError(comptime current_tag: Tag, comptime candidate_tag: Tag) type {
+            return if (variantSize(current_tag) < variantSize(candidate_tag))
+                Allocator.Error
+            else
+                error{};
+        }
+
+        pub fn ResizeVariantError(comptime candidate_tag: Tag) type {
+            const size = variantSize(candidate_tag);
+            return for (std.enums.values(Tag)) |tag| {
+                if (variantSize(tag) < size) break Allocator.Error;
+            } else error{};
+        }
+
+        pub fn VariantResizeError(comptime current_tag: Tag) type {
+            const size = variantSize(current_tag);
+            return for (std.enums.values(Tag)) |tag| {
+                if (size < variantSize(tag)) break Allocator.Error;
+            } else error{};
+        }
+
         /// Initialize with capacity of `num` bytes. Deinitialize with `deinit`.
         pub fn initBytesCapacity(allocator: Allocator, num: usize) Allocator.Error!Cul {
             return Cul{ .bytes = try .initCapacity(allocator, num) };
@@ -193,6 +214,242 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
                     );
                 },
             }
+        }
+
+        pub fn setVariantResizeVariantUncheckedDir(
+            cul: *Cul,
+            allocator: Allocator,
+            comptime dir: Direction,
+            current_variant_index: usize,
+            comptime current_tag: Tag,
+            comptime candidate_tag: Tag,
+            payload: Payload(candidate_tag),
+        ) VariantResizeVariantError(current_tag, candidate_tag)!void {
+            const candidate_size: comptime_int = comptime variantSize(candidate_tag);
+            const current_size: comptime_int = comptime variantSize(current_tag);
+            const diff_size: comptime_int = candidate_size - current_size;
+
+            const end_source = cul.bytes.items.len;
+            const start_source = switch (dir) {
+                .forward => add(current_variant_index, current_size),
+                .backward => current_variant_index,
+            };
+
+            const candidate_variant_index = switch (dir) {
+                .forward => current_variant_index,
+                .backward => add(current_variant_index, diff_size),
+            };
+
+            const end_dest = add(end_source, diff_size);
+            const start_dest = add(start_source, diff_size);
+
+            if (0 < diff_size) {
+                try cul.bytes.ensureUnusedCapacity(allocator, diff_size);
+                cul.bytes.items = cul.bytes.items.ptr[0..end_dest];
+            }
+
+            const dest = cul.bytes.items[start_dest..end_dest];
+            const source = cul.bytes.items[start_source..end_source];
+
+            if (0 < diff_size)
+                std.mem.copyBackwards(u8, dest, source)
+            else if (diff_size < 0)
+                std.mem.copyForwards(u8, dest, source);
+
+            cul.setVariantUncheckedDir(dir, candidate_variant_index, candidate_tag, payload);
+
+            if (diff_size < 0)
+                cul.bytes.items = cul.bytes.items.ptr[0..end_dest];
+        }
+
+        pub fn setVariantResizeVariantUnchecked(
+            cul: *Cul,
+            allocator: Allocator,
+            current_variant_index: usize,
+            comptime current_tag: Tag,
+            comptime candidate_tag: Tag,
+            payload: Payload(candidate_tag),
+        ) VariantResizeVariantError(current_tag, candidate_tag)!void {
+            try cul.setVariantResizeVariantUncheckedDir(
+                allocator,
+                iter.direction(),
+                current_variant_index,
+                current_tag,
+                candidate_tag,
+                payload,
+            );
+        }
+
+        pub fn setVariantResizeUnchecked(
+            cul: *Cul,
+            allocator: Allocator,
+            current_variant_index: usize,
+            comptime current_tag: Tag,
+            u: Union,
+        ) VariantResizeError(current_tag)!void {
+            try cul.setVariantResizeUncheckedDir(
+                allocator,
+                iter.direction(),
+                current_variant_index,
+                current_tag,
+                u,
+            );
+        }
+
+        pub fn setVariantResizeUncheckedDir(
+            cul: *Cul,
+            allocator: Allocator,
+            comptime dir: Direction,
+            current_variant_index: usize,
+            comptime current_tag: Tag,
+            u: Union,
+        ) VariantResizeError(current_tag)!void {
+            switch (u) {
+                inline else => |payload, comptime_tag| try cul.setVariantResizeVariantUncheckedDir(
+                    allocator,
+                    dir,
+                    current_variant_index,
+                    current_tag,
+                    comptime_tag,
+                    payload,
+                ),
+            }
+        }
+
+        pub fn setResizeVariant(
+            cul: *Cul,
+            allocator: Allocator,
+            current_variant_index: usize,
+            comptime candidate_tag: Tag,
+            payload: Payload(candidate_tag),
+        ) ResizeVariantError(candidate_tag)!void {
+            try cul.setResizeVariantDir(
+                allocator,
+                iter.direction(),
+                current_variant_index,
+                candidate_tag,
+                payload,
+            );
+        }
+
+        pub fn setResizeVariantDir(
+            cul: *Cul,
+            allocator: Allocator,
+            comptime dir: Direction,
+            current_variant_index: usize,
+            comptime candidate_tag: Tag,
+            payload: Payload(candidate_tag),
+        ) ResizeVariantError(candidate_tag)!void {
+            const current_tag = cul.getTagDir(dir, current_variant_index);
+            switch (current_tag) {
+                inline else => |comptime_tag| try cul.setVariantResizeVariantUncheckedDir(
+                    allocator,
+                    dir,
+                    current_variant_index,
+                    comptime_tag,
+                    candidate_tag,
+                    payload,
+                ),
+            }
+        }
+
+        pub fn setResize(
+            cul: *Cul,
+            allocator: Allocator,
+            current_variant_index: usize,
+            u: Union,
+        ) Allocator.Error!void {
+            try cul.setResizeDir(allocator, iter.direction(), current_variant_index, u);
+        }
+
+        pub fn setResizeDir(
+            cul: *Cul,
+            allocator: Allocator,
+            comptime dir: Direction,
+            current_variant_index: usize,
+            u: Union,
+        ) Allocator.Error!void {
+            switch (u) {
+                inline else => |payload, comptime_tag| try cul.setResizeVariantDir(
+                    allocator,
+                    dir,
+                    current_variant_index,
+                    comptime_tag,
+                    payload,
+                ),
+            }
+        }
+
+        pub fn setVariantResizeVariantDir(
+            cul: *Cul,
+            allocator: Allocator,
+            comptime dir: Direction,
+            current_variant_index: usize,
+            comptime current_tag: Tag,
+            comptime candidate_tag: Tag,
+            payload: Payload(candidate_tag),
+        ) (TagError || VariantResizeVariantError(current_tag, candidate_tag))!void {
+            try cul.checkTagDir(dir, current_variant_index, current_tag);
+            try cul.setVariantResizeVariantUncheckedDir(
+                allocator,
+                dir,
+                current_variant_index,
+                current_tag,
+                candidate_tag,
+                payload,
+            );
+        }
+
+        pub fn setVariantResizeVariant(
+            cul: *Cul,
+            allocator: Allocator,
+            current_variant_index: usize,
+            comptime current_tag: Tag,
+            comptime candidate_tag: Tag,
+            payload: Payload(candidate_tag),
+        ) (TagError || VariantResizeVariantError(current_tag, candidate_tag))!void {
+            try cul.setVariantResizeVariantDir(
+                allocator,
+                iter.direction(),
+                current_variant_index,
+                current_tag,
+                candidate_tag,
+                payload,
+            );
+        }
+
+        pub fn setVariantResize(
+            cul: *Cul,
+            allocator: Allocator,
+            current_variant_index: usize,
+            comptime current_tag: Tag,
+            u: Union,
+        ) (TagError || VariantResizeError(current_tag))!void {
+            try cul.setVariantResizeDir(
+                allocator,
+                iter.direction(),
+                current_variant_index,
+                current_tag,
+                u,
+            );
+        }
+
+        pub fn setVariantResizeDir(
+            cul: *Cul,
+            allocator: Allocator,
+            comptime dir: Direction,
+            current_variant_index: usize,
+            comptime current_tag: Tag,
+            u: Union,
+        ) (TagError || VariantResizeError(current_tag))!void {
+            try cul.checkTag(current_variant_index, current_tag);
+            try cul.setVariantResizeUncheckedDir(
+                allocator,
+                dir,
+                current_variant_index,
+                current_tag,
+                u,
+            );
         }
 
         /// This function assumes that the given index is valid, and makes a copy of its
@@ -849,10 +1106,9 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             };
         }
 
-        fn ResizeError(comptime current_tag: Tag, comptime candidate_tag: Tag) type {
-            const candidate_size = variantSize(candidate_tag);
-            const current_size = variantSize(current_tag);
-            return if (candidate_size <= current_size) error{} else Allocator.Error;
+        /// This function is a util that deals with comptime offsets in indexes.
+        inline fn add(index: usize, comptime offset: comptime_int) usize {
+            return if (offset < 0) index - (-offset) else index + offset;
         }
 
         inline fn checkDir(comptime dir: Direction) void {

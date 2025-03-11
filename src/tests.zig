@@ -1222,3 +1222,116 @@ test "BothCul.remove" {
     try t.expectEqual(Union{ .float = 3.1415 }, back_iter.next());
     try t.expectEqual(null, back_iter.next());
 }
+
+test "ForCul.setVariantResizeVariantUnchecked" {
+    var forw = ForCul{};
+    defer forw.deinit(ta);
+
+    try forw.append(ta, .{ .array = .{ 2, 3, 5, 7 } });
+    try forw.append(ta, .empty);
+    try forw.append(ta, .{ .float = 3.14 });
+
+    try forw.setVariantResizeVariantUnchecked(ta, 5, .empty, .byte, 69);
+
+    var iter = forw.iterate();
+
+    try t.expectEqual(Union{ .array = .{ 2, 3, 5, 7 } }, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .float = 3.14 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    const index = forw.resolveIndex(2) orelse return error.UnexpectedNull;
+    try forw.setVariantResizeVariantUnchecked(ta, index, .float, .signed_byte, -42);
+
+    iter = forw.iterate();
+
+    try t.expectEqual(Union{ .array = .{ 2, 3, 5, 7 } }, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .signed_byte = -42 }, iter.next());
+    try t.expectEqual(null, iter.next());
+}
+
+test "BackCul.setVariantResizeVariantUnchecked" {
+    var back = BackCul{};
+    defer back.deinit(ta);
+
+    try back.append(ta, .{ .array = .{ 2, 3, 5, 7 } });
+    try back.append(ta, .empty);
+    try back.append(ta, .{ .float = 3.1415 });
+
+    var iter = back.iterate();
+
+    try t.expectEqual(Union{ .float = 3.1415 }, iter.next());
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .array = .{ 2, 3, 5, 7 } }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    var index = back.resolveIndex(2) orelse return error.UnexpectedNull;
+    try back.setVariantResizeVariantUnchecked(ta, index, .array, .byte, 69);
+
+    iter = back.iterate();
+
+    try t.expectEqual(Union{ .float = 3.1415 }, iter.next());
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    index = back.resolveIndex(2) orelse return error.UnexpectedNull;
+    try back.setVariantResizeVariantUnchecked(ta, index, .byte, .signed_byte, -42);
+
+    iter = back.iterate();
+
+    try t.expectEqual(Union{ .float = 3.1415 }, iter.next());
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .signed_byte = -42 }, iter.next());
+    try t.expectEqual(null, iter.next());
+
+    index = back.resolveIndex(1) orelse return error.UnexpectedNull;
+    try back.setVariantResizeVariantUnchecked(ta, index, .empty, .array, .{ 2, 3, 5, 8 });
+
+    iter = back.iterate();
+
+    try t.expectEqual(Union{ .float = 3.1415 }, iter.next());
+    try t.expectEqual(Union{ .array = .{ 2, 3, 5, 8 } }, iter.next());
+    try t.expectEqual(Union{ .signed_byte = -42 }, iter.next());
+    try t.expectEqual(null, iter.next());
+}
+
+test "BothCul.setVariantResizeVariantUncheckedDir" {
+    var both = BothCul{};
+    defer both.deinit(ta);
+
+    try both.append(ta, .{ .array = .{ 2, 3, 5, 7 } });
+    try both.append(ta, .empty);
+    try both.append(ta, .{ .big_int = 10_000_000_000 });
+
+    var forw_iter = both.iterateDir(.forward);
+
+    try t.expectEqual(Union{ .array = .{ 2, 3, 5, 7 } }, forw_iter.next());
+    try t.expectEqual(Union.empty, forw_iter.next());
+    try t.expectEqual(Union{ .big_int = 10_000_000_000 }, forw_iter.next());
+    try t.expectEqual(null, forw_iter.next());
+
+    var back_iter = both.iterateDir(.backward);
+
+    try t.expectEqual(Union{ .big_int = 10_000_000_000 }, back_iter.next());
+    try t.expectEqual(Union.empty, back_iter.next());
+    try t.expectEqual(Union{ .array = .{ 2, 3, 5, 7 } }, back_iter.next());
+    try t.expectEqual(null, back_iter.next());
+
+    forw_iter = .init(&both);
+    try both.setVariantResizeVariantUncheckedDir(ta, .forward, 0, .array, .byte, 69);
+
+    try t.expectEqual(Union{ .byte = 69 }, forw_iter.next());
+    try t.expectEqual(Union.empty, forw_iter.next());
+    try t.expectEqual(Union{ .big_int = 10_000_000_000 }, forw_iter.next());
+    try t.expectEqual(null, forw_iter.next());
+
+    try both.setVariantResizeVariantUncheckedDir(ta, .backward, both.bytes.items.len, .big_int, .float, 3.14);
+    back_iter = .init(&both);
+
+    try t.expectEqual(Union{ .float = 3.14 }, back_iter.next());
+    try t.expectEqual(Union.empty, back_iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, back_iter.next());
+    try t.expectEqual(null, back_iter.next());
+}
