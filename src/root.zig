@@ -216,6 +216,10 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             }
         }
 
+        /// This function assumes that the index is valid, and that the size of the payload
+        /// indicated by the `current_tag` is the same as the actual current payload of the
+        /// variant at the given index. Allocates more memory as necessary, retain memory if the
+        /// operation is shrinking. Invalidates element pointers if addiional memory is needed.
         pub fn setVariantResizeVariantUncheckedDir(
             cul: *Cul,
             allocator: Allocator,
@@ -262,6 +266,10 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
                 cul.bytes.items = cul.bytes.items.ptr[0..end_dest];
         }
 
+        /// This function assumes that the index is valid, and that the size of the payload
+        /// indicated by the `current_tag` is the same as the actual current payload of the
+        /// variant at the given index. Allocates more memory as necessary, retain memory if the
+        /// operation is shrinking. Invalidates element pointers if addiional memory is needed.
         pub fn setVariantResizeVariantUnchecked(
             cul: *Cul,
             allocator: Allocator,
@@ -280,6 +288,10 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             );
         }
 
+        /// This function assumes that the index is valid, and that the size of the payload
+        /// indicated by the `current_tag` is the same as the actual current payload of the
+        /// variant at the given index. Allocates more memory as necessary, retain memory if the
+        /// operation is shrinking. Invalidates element pointers if addiional memory is needed.
         pub fn setVariantResizeUnchecked(
             cul: *Cul,
             allocator: Allocator,
@@ -296,6 +308,10 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             );
         }
 
+        /// This function assumes that the index is valid, and that the size of the payload
+        /// indicated by the `current_tag` is the same as the actual current payload of the
+        /// variant at the given index. Allocates more memory as necessary, retain memory if the
+        /// operation is shrinking. Invalidates element pointers if addiional memory is needed.
         pub fn setVariantResizeUncheckedDir(
             cul: *Cul,
             allocator: Allocator,
@@ -316,6 +332,9 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             }
         }
 
+        /// This function assumes that the index is valid. Allocates more memory as necessary,
+        /// retain memory if the operation is shrinking. Invalidates element pointers if addiional
+        /// memory is needed.
         pub fn setResizeVariant(
             cul: *Cul,
             allocator: Allocator,
@@ -332,6 +351,9 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             );
         }
 
+        /// This function assumes that the index is valid. Allocates more memory as necessary,
+        /// retain memory if the operation is shrinking. Invalidates element pointers if addiional
+        /// memory is needed.
         pub fn setResizeVariantDir(
             cul: *Cul,
             allocator: Allocator,
@@ -353,6 +375,9 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             }
         }
 
+        /// This function assumes that the index is valid. Allocates more memory as necessary,
+        /// retain memory if the operation is shrinking. Invalidates element pointers if addiional
+        /// memory is needed.
         pub fn setResize(
             cul: *Cul,
             allocator: Allocator,
@@ -362,6 +387,9 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             try cul.setResizeDir(allocator, iter.direction(), current_variant_index, u);
         }
 
+        /// This function assumes that the index is valid. Allocates more memory as necessary,
+        /// retain memory if the operation is shrinking. Invalidates element pointers if addiional
+        /// memory is needed.
         pub fn setResizeDir(
             cul: *Cul,
             allocator: Allocator,
@@ -380,6 +408,10 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             }
         }
 
+        /// This function assumes that the index is valid. It expects that the `current_tag`
+        /// indicates a payload with the same size as the payload of the variant located at the
+        /// given index. Allocates more memory as necessary, retain memory if the operation is
+        /// shrinking. Invalidates element pointers if addiional memory is needed.
         pub fn setVariantResizeVariantDir(
             cul: *Cul,
             allocator: Allocator,
@@ -400,6 +432,10 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             );
         }
 
+        /// This function assumes that the index is valid. It expects that the `current_tag`
+        /// indicates a payload with the same size as the payload of the variant located at the
+        /// given index. Allocates more memory as necessary, retain memory if the operation is
+        /// shrinking. Invalidates element pointers if addiional memory is needed.
         pub fn setVariantResizeVariant(
             cul: *Cul,
             allocator: Allocator,
@@ -418,6 +454,10 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             );
         }
 
+        /// This function assumes that the index is valid. It expects that the `current_tag`
+        /// indicates a payload with the same size as the payload of the variant located at the
+        /// given index. Allocates more memory as necessary, retain memory if the operation is
+        /// shrinking. Invalidates element pointers if addiional memory is needed.
         pub fn setVariantResize(
             cul: *Cul,
             allocator: Allocator,
@@ -434,6 +474,10 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             );
         }
 
+        /// This function assumes that the index is valid. It expects that the `current_tag`
+        /// indicates a payload with the same size as the payload of the variant located at the
+        /// given index. Allocates more memory as necessary, retain memory if the operation is
+        /// shrinking. Invalidates element pointers if addiional memory is needed.
         pub fn setVariantResizeDir(
             cul: *Cul,
             allocator: Allocator,
