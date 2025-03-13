@@ -201,37 +201,55 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
         /// Invalidates element pointers if additional memory is needed.
         pub fn append(cul: *Cul, allocator: Allocator, u: Union) Allocator.Error!void {
             switch (u) {
-                inline else => |payload, comptime_tag| {
-                    const size = comptime variantSize(comptime_tag);
-                    const index = cul.bytes.items.len +
-                        if (iter == .backward) size else 0;
-                    _ = try cul.bytes.addManyAsArray(allocator, size);
-                    cul.setVariantUncheckedDir(
-                        if (iter == .backward) .backward else .forward,
-                        index,
-                        comptime_tag,
-                        payload,
-                    );
-                },
+                inline else => |payload, comptime_tag| try cul.appendVariant(allocator, comptime_tag, payload),
             }
+        }
+
+        /// Extend the list by 1 element. Allocates more memory as necessary.
+        /// Invalidates element pointers if additional memory is needed.
+        pub fn appendVariant(
+            cul: *Cul,
+            allocator: Allocator,
+            comptime tag: Tag,
+            payload: Payload(tag),
+        ) Allocator.Error!void {
+            const size = comptime variantSize(tag);
+            const index = cul.bytes.items.len +
+                if (iter == .backward) size else 0;
+            _ = try cul.bytes.addManyAsArray(allocator, size);
+            cul.setVariantUncheckedDir(
+                if (iter == .backward) .backward else .forward,
+                index,
+                tag,
+                payload,
+            );
         }
 
         /// Extend the list by 1 element. Allocates more memory as necessary.
         /// Invalidates element pointers if additional memory is needed.
         pub fn prepend(cul: *Cul, allocator: Allocator, u: Union) Allocator.Error!void {
             switch (u) {
-                inline else => |payload, comptime_tag| {
-                    const size = comptime variantSize(comptime_tag);
-                    const index = if (iter == .backward) size else 0;
-                    try cul.insertVariantDir(
-                        allocator,
-                        if (iter == .backward) .backward else .forward,
-                        index,
-                        comptime_tag,
-                        payload,
-                    );
-                },
+                inline else => |payload, comptime_tag| try cul.prependVariant(allocator, comptime_tag, payload),
             }
+        }
+
+        /// Extend the list by 1 element. Allocates more memory as necessary.
+        /// Invalidates element pointers if additional memory is needed.
+        pub fn prependVariant(
+            cul: *Cul,
+            allocator: Allocator,
+            comptime tag: Tag,
+            payload: Payload(tag),
+        ) Allocator.Error!void {
+            const size = comptime variantSize(tag);
+            const index = if (iter == .backward) size else 0;
+            try cul.insertVariantDir(
+                allocator,
+                if (iter == .backward) .backward else .forward,
+                index,
+                tag,
+                payload,
+            );
         }
 
         /// This function assumes that the index is valid, and that the size of the payload
