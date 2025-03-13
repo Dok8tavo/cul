@@ -834,6 +834,7 @@ test "ForeCul.append" {
     try t.expectEqual(Union{ .byte = 69 }, forw.get(second_index));
     try t.expectEqual(Union{ .float = 3.1415 }, forw.get(third_index));
 }
+
 test "BackCul.append" {
     var back = BackCul{};
     defer back.deinit(ta);
@@ -851,6 +852,7 @@ test "BackCul.append" {
     try t.expectEqual(Union{ .byte = 69 }, back.get(second_index));
     try t.expectEqual(Union{ .float = 3.1415 }, back.get(third_index));
 }
+
 test "BothCul.append" {
     var both = BothCul{};
     defer both.deinit(ta);
@@ -943,6 +945,61 @@ test "BothCul.iterate" {
     try t.expectEqual(Union{ .signed_byte = -1 }, riter.next());
     try t.expectEqual(Union{ .byte = 69 }, riter.next());
     try t.expectEqual(Union.empty, riter.next());
+}
+
+test "ForeCul.prepend" {
+    var forw = ForCul{};
+    defer forw.deinit(ta);
+
+    try forw.prepend(ta, .{ .byte = 69 });
+    try forw.prepend(ta, .{ .float = 3.14 });
+    try forw.prepend(ta, .empty);
+
+    var iter = forw.iterate();
+
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(Union{ .float = 3.14 }, iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(null, iter.next());
+}
+
+test "BackCul.prepend" {
+    var back = BackCul{};
+    defer back.deinit(ta);
+
+    try back.prepend(ta, .{ .byte = 69 });
+    try back.prepend(ta, .{ .float = 3.14 });
+    try back.prepend(ta, .empty);
+
+    var iter = back.iterate();
+
+    try t.expectEqual(Union{ .byte = 69 }, iter.next());
+    try t.expectEqual(Union{ .float = 3.14 }, iter.next());
+    try t.expectEqual(Union.empty, iter.next());
+    try t.expectEqual(null, iter.next());
+}
+
+test "BothCul.prepend" {
+    var both = BothCul{};
+    defer both.deinit(ta);
+
+    try both.prepend(ta, .{ .byte = 69 });
+    try both.prepend(ta, .{ .float = 3.14 });
+    try both.prepend(ta, .empty);
+
+    var back_iter = both.iterateDir(.backward);
+
+    try t.expectEqual(Union{ .byte = 69 }, back_iter.next());
+    try t.expectEqual(Union{ .float = 3.14 }, back_iter.next());
+    try t.expectEqual(Union.empty, back_iter.next());
+    try t.expectEqual(null, back_iter.next());
+
+    var forw_iter = both.iterateDir(.forward);
+
+    try t.expectEqual(Union.empty, forw_iter.next());
+    try t.expectEqual(Union{ .float = 3.14 }, forw_iter.next());
+    try t.expectEqual(Union{ .byte = 69 }, forw_iter.next());
+    try t.expectEqual(null, forw_iter.next());
 }
 
 test "ForeCul.resolveIndex" {

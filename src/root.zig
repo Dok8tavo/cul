@@ -216,6 +216,24 @@ pub fn CompactUnionList(comptime U: type, comptime with_options: With) type {
             }
         }
 
+        /// Extend the list by 1 element. Allocates more memory as necessary.
+        /// Invalidates element pointers if additional memory is needed.
+        pub fn prepend(cul: *Cul, allocator: Allocator, u: Union) Allocator.Error!void {
+            switch (u) {
+                inline else => |payload, comptime_tag| {
+                    const size = comptime variantSize(comptime_tag);
+                    const index = if (iter == .backward) size else 0;
+                    try cul.insertVariantDir(
+                        allocator,
+                        if (iter == .backward) .backward else .forward,
+                        index,
+                        comptime_tag,
+                        payload,
+                    );
+                },
+            }
+        }
+
         /// This function assumes that the index is valid, and that the size of the payload
         /// indicated by the `current_tag` is the same as the actual current payload of the
         /// variant at the given index. Allocates more memory as necessary, retain memory if the
